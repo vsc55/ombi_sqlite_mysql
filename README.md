@@ -14,6 +14,7 @@ In the mysql server we will have to empty the tables:
 
 We obtain sqlite data and adapt it to mysql.
 
+```
 # sudo apt install libsqlite3-mod-impexp
 # wget https://raw.githubusercontent.com/vsc55/ombi_sqlite_mysql/master/ombi_sqlite2mysql.py
 # chmod +x ombi_sqlite2mysql.py
@@ -22,6 +23,9 @@ We obtain sqlite data and adapt it to mysql.
 select export_sql('ombi.sql','1');
 
 # ./ombi_sqlite2mysql.py ombi.sql > ombi.mysql
+```
+
+
 In ombi.mysql are the inserts that must be executed on our mysql server.
 The same must be done with OmbiExternal.db and OmbiSettings.db
 
