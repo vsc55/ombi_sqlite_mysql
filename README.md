@@ -10,6 +10,22 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 ## Create and prepare tables:
 1. Stop ombi
 2. Modify database.json to use mysql.
+```
+{
+  "OmbiDatabase": {
+    "Type": "MySQL",
+    "ConnectionString": "Server=IP-MYSQL;Port=3306;Database=Ombi;User=ombi;Password=ombi"
+  },
+  "SettingsDatabase": {
+    "Type": "MySQL",
+    "ConnectionString": "Server=IP-MYSQL;Port=3306;Database=Ombi;User=ombi;Password=ombi"
+  },
+  "ExternalDatabase": {
+    "Type": "MySQL",
+    "ConnectionString": "Server=IP-MYSQL;Port=3306;Database=Ombi;User=ombi;Password=ombi"
+  }
+}
+```
 3. Start ombi and wait for it to create the tables.
 4. When you finish creating the tables stop ombi.
 5. Empty all tables with data except:
