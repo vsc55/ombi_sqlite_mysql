@@ -1,18 +1,22 @@
-Migration procedure:
+# Migration procedure:
 
+## Create DataBase and User:
+```
+CREATE DATABASE IF NOT EXISTS `Ombi` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
+CREATE USER 'ombi'@'%' IDENTIFIED BY 'ombi';
+GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
+```
 
+## Create and prepare tables:
+1. Stop ombi
+2. Modify database.json to use mysql.
+3. Start ombi and wait for it to create the tables.
+4. When you finish creating the tables stop ombi.
+5. Empty all tables with data except:
+- AspNetRoles
+- __EFMigrationsHistory
 
-Stop ombi
-Modify database.json to use mysql.
-Start ombi and wait for it to create the tables.
-When you finish creating the tables stop ombi.
-
-In the mysql server we will have to empty the tables:
-- AspNetUsers
-- NotificationTemplates
-- GlobalSettings
-
-We obtain sqlite data and adapt it to mysql.
+## We obtain sqlite data and adapt it to mysql.
 
 ```
 # cd /etc/Ombi
