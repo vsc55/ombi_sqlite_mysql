@@ -39,22 +39,13 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 # wget https://raw.githubusercontent.com/vsc55/ombi_sqlite_mysql/master/ombi_sqlite2mysql.py
 # chmod +x ombi_sqlite2mysql.py
 
-# sqlite3 Ombi.db
-.load libsqlite3_mod_impexp
-select export_sql('ombi.sql','1');
-.exit
+# sqlite3 Ombi.db -cmd ".load libsqlite3_mod_impexp" "select export_sql('ombi.sql','1')"
 # ./ombi_sqlite2mysql.py ombi.sql > ombi.mysql
 
-# sqlite3 OmbiExternal.db
-.load libsqlite3_mod_impexp
-select export_sql('OmbiExternal.sql','1');
-.exit
+# sqlite3 OmbiExternal.db -cmd ".load libsqlite3_mod_impexp" "select export_sql('OmbiExternal.sql','1')"
 # ./ombi_sqlite2mysql.py OmbiExternal.sql > OmbiExternal.mysql
 
-# sqlite3 OmbiSettings.db
-.load libsqlite3_mod_impexp
-select export_sql('OmbiSettings.sql','1');
-.exit
+# sqlite3 OmbiSettings.db -cmd ".load libsqlite3_mod_impexp" "select export_sql('OmbiSettings.sql','1')"
 # ./ombi_sqlite2mysql.py OmbiSettings.sql > OmbiSettings.mysql
 ```
 
