@@ -29,7 +29,6 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 3. Start ombi and wait for it to create the tables.
 4. When you finish creating the tables stop ombi.
 5. Empty all tables with data except:
-- AspNetRoles
 - __EFMigrationsHistory
 
 ## We obtain sqlite data and adapt it to mysql.
