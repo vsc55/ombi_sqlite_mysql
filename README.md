@@ -28,10 +28,12 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 ```
 3. Start ombi and wait for it to create the tables.
 4. When you finish creating the tables stop ombi.
-NOTE:
+
+  **NOTE:
   There are times when OmbiExternal tables are not created at startup.
   You have to access the web for Ombi to detect that they are missing and create them.
-  You can know if you have created them by seeing if there are tables such as PlexEpisode, PlexSeasonsContent or SonarrCache.
+  You can know if you have created them by seeing if there are tables such as PlexEpisode, PlexSeasonsContent or SonarrCache.**
+  
 5. Empty all tables with data except:
 - __EFMigrationsHistory
 
