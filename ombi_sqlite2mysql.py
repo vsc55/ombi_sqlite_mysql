@@ -1,6 +1,4 @@
 #! /usr/bin/env python
-# Source https://github.com/tutorialpython/sqlite2mysql
-# Fix Ombi
 import sys
 import os
 import codecs
@@ -9,34 +7,15 @@ import subprocess
 import sqlite3
 from optparse import OptionParser
 
-
-IGNOREDPREFIXES = [
-    'PRAGMA',
-    'BEGIN TRANSACTION;',
-    'COMMIT;',
-    'DELETE FROM sqlite_sequence;',
-    'INSERT INTO "sqlite_sequence"',
-    'INSERT OR REPLACE INTO "sqlite_sequence"',
-]
-
 mysql_db_file = "data_ombi.mysql"
 json_db_file = ""
 json_db_data = []
 list_db = ['OmbiDatabase', 'SettingsDatabase', 'ExternalDatabase']
 list_db_process = []
 
-def _replace(line):
-    if any(line.startswith(prefix) for prefix in IGNOREDPREFIXES):
-        return
-    line = line.replace("INTEGER PRIMARY KEY", "INTEGER AUTO_INCREMENT PRIMARY KEY")
-    line = line.replace("AUTOINCREMENT", "AUTO_INCREMENT")
-    line = line.replace("DEFAULT 't'", "DEFAULT '1'")
-    line = line.replace("DEFAULT 'f'", "DEFAULT '0'")
-    line = line.replace(",'t'", ",'1'")
-    line = line.replace(",'f'", ",'0'")
-    line = line.replace("INSERT OR REPLACE INTO", "INSERT INTO")
-    return line
 
+
+# TODO: _process y _backticks codigo pendiente de eliminar 
 def _backticks(line, in_string):
     """Replace double quotes by backticks outside (multiline) strings
 
@@ -61,6 +40,7 @@ def _backticks(line, in_string):
             elif c == '"':
                 new = new + '`'
                 continue
+
         elif c == "'":
             in_string = False
         new = new + c
@@ -70,11 +50,12 @@ def _process(opts, lines):
     in_string = False
     for line in lines:
         if not in_string:
-            line = _replace(line)
             if line is None:
                 continue
         line, in_string = _backticks(line, in_string)
         yield line
+
+
 
 def _read_json(file_json, def_return=None):
     return_date = def_return
@@ -142,9 +123,13 @@ def _sqlite_dump(opts):
             print ("Warning: {0} no location data source, ignorer database!".format(db_name))
             continue
 
+        yield('--')
+        yield('--DataBase: %s;' % db_name)
+        yield('--')
+
         sqlite_db_file =  connection_str.split("=")[1]
         con = sqlite3.connect(sqlite_db_file)
-        for line in _process(opts, _iterdump(con)):
+        for line in _iterdump(con):
             yield line
         print ("OK!")
 
@@ -163,11 +148,12 @@ def _iterdump(connection):
     for table_name, type, sql in schema_res.fetchall():
         if table_name in ['sqlite_sequence', 'sqlite_stat1'] or table_name.startswith('sqlite_'):
             continue
+        elif cu.execute("SELECT COUNT(*) FROM {0}".format(table_name)).fetchone()[0] < 1:
+            continue
         else:
             pass
             #Ignorer CREATE TABLE
             #yield('%s;' % sql)
-
 
         # TODO: Pendiente agrupar insert para una exportacion mas rapida.
 
@@ -181,13 +167,28 @@ def _iterdump(connection):
                 q_col += ", "
             q_col += '`{0}`'.format(col_n)
 
-        q = "SELECT 'INSERT INTO `%(tbl_name)s` (%(col_name)s) VALUES("
+        yield('--')
+        yield('--Table: %s;' % table_name)
+        yield('--')
+
+        q = "SELECT '"
         q += ",".join(["'||quote(" + col + ")||'" for col in column_names])
-        q += ")' FROM '%(tbl_name)s'"
-        query_res = cu.execute(q % {'tbl_name': table_name, 'col_name':q_col })
+        q += "' FROM '%(tbl_name)s'"
+
+        query_res = cu.execute(q % {'tbl_name': table_name})
 
         for row in query_res:
-            yield("%s;" % row[0])
+            q_insert = row[0].encode('utf-8')
+            q_insert = q_insert.replace('\\', '\\\\')
+            q_insert = q_insert.replace('"', '\\"')
+
+            #TODO: Lo dejo por si las moscas, pero casi seguro que sobra.
+            #q_insert = q_insert.replace(",'t'", ",'1'")
+            #q_insert = q_insert.replace(",'f'", ",'0'")
+
+            q_insert = 'INSERT INTO `{0}` ({1}) VALUES({2})'.format(table_name, q_col, q_insert)
+            yield("%s;" % q_insert)
+
 
 def _save_dump(opts, data):
     print ("Save dump:")
@@ -196,7 +197,7 @@ def _save_dump(opts, data):
     try:
         with open(dump_db_file, 'w') as f:
             for line in data:
-                f.write('%s\n' % line.encode('utf-8').strip())
+                f.write('%s\n' % line)
         
     except IOError as ex:
         print(" ERROR!")
