@@ -73,12 +73,13 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 Now we import the data into our mysql database with the content of the file we generated before "data_ombi.mysql".
 
 **NOTE: When importing the data, the order of the following keys must be taken into account.**
-Plex:
+
+**Plex:**
 1. PlexServerContent
 2. PlexSeasonsContent
 3. PlexEpisode
 
-Emby:
+**Emby:**
 1. EmbyContent
 2. EmbyEpisode
 
