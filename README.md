@@ -1,5 +1,36 @@
 # Migration procedure:
 
+## We obtain sqlite data and adapt it to mysql.
+
+1. Create or modify database.json configured with sqlite databases:
+```
+{
+    "OmbiDatabase": {
+        "Type":"sqlite",
+        "ConnectionString":"Data Source=/etc/Ombi/Ombi.db"
+    },
+    "SettingsDatabase": {
+        "Type":"sqlite",
+        "ConnectionString":"Data Source=/etc/Ombi/OmbiSettings.db"
+    },
+    "ExternalDatabase": {
+        "Type":"sqlite",
+        "ConnectionString":"Data Source=/etc/Ombi/OmbiExternal.db"
+    }
+}
+```
+2. Download script and extract data from sqlite:
+
+```
+# cd /etc/Ombi
+# wget https://raw.githubusercontent.com/vsc55/ombi_sqlite_mysql/master/ombi_sqlite2mysql.py
+# chmod +x ombi_sqlite2mysql.py
+
+# python2 ombi_sqlite2mysql.py -c /etc/Ombi
+```
+We will create a data_ombi.mysql file with all the inserts that we will add later to the database.
+
+
 ## Create DataBase and User:
 ```
 CREATE DATABASE IF NOT EXISTS `Ombi` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
@@ -37,32 +68,15 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 5. Empty all tables with data except:
 - __EFMigrationsHistory
 
-## We obtain sqlite data and adapt it to mysql.
+## Import data.
 
-```
-# cd /etc/Ombi
-# sudo apt install libsqlite3-mod-impexp
-# wget https://raw.githubusercontent.com/vsc55/ombi_sqlite_mysql/master/ombi_sqlite2mysql.py
-# chmod +x ombi_sqlite2mysql.py
+Now we import the data into our mysql database with the content of the file we generated before "data_ombi.mysql".
 
-# sqlite3 Ombi.db -cmd ".load libsqlite3_mod_impexp" "select export_sql('ombi.sql','1')"
-# ./ombi_sqlite2mysql.py ombi.sql > ombi.mysql
-
-# sqlite3 OmbiExternal.db -cmd ".load libsqlite3_mod_impexp" "select export_sql('OmbiExternal.sql','1')"
-# ./ombi_sqlite2mysql.py OmbiExternal.sql > OmbiExternal.mysql
-
-# sqlite3 OmbiSettings.db -cmd ".load libsqlite3_mod_impexp" "select export_sql('OmbiSettings.sql','1')"
-# ./ombi_sqlite2mysql.py OmbiSettings.sql > OmbiSettings.mysql
-```
-
-
-In ombi.mysql, OmbiExternal.mysql and OmbiSettings.mysql are the inserts that must be executed on our mysql server.
-
-
-NOTE: When importing data from OmbiExternal.db you have to import the tables in this order:
+**NOTE: When importing the data, the order of the following keys must be taken into account.**
 1. PlexServerContent
 2. PlexSeasonsContent
 3. PlexEpisode
+
 
 
 And that seems to me to be everything.
