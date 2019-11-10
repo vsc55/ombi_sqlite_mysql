@@ -129,31 +129,31 @@ def _sqlite_dump(opts):
 
         sqlite_db_file =  connection_str.split("=")[1]
         con = sqlite3.connect(sqlite_db_file)
-        for line in _iterdump(con):
+        for line in _iterdump(con, db_name):
             yield line
         print ("OK!")
 
-def _iterdump(connection):
+def _iterdump(connection, db_name):
     cu = connection.cursor()
 
-    q = """
-       SELECT name, type, sql
-        FROM sqlite_master
-            WHERE sql NOT NULL AND
-            type == 'table'
-            ORDER BY "name"
-        """
+    q = "SELECT name, type FROM sqlite_master WHERE sql NOT NULL AND type == 'table' ORDER BY "
     
+    # We control the order of tables so that the "INSERT" are in order and that there are related tables.
+    if db_name == "ExternalDatabase":
+        q += " name = 'EmbyEpisode', name = 'EmbyContent', name = 'PlexEpisode', name = 'PlexSeasonsContent', name = 'PlexServerContent'"
+    else:
+        q += ' "name"'
+
     schema_res = cu.execute(q)
-    for table_name, type, sql in schema_res.fetchall():
+    for table_name, type in schema_res.fetchall():
         if table_name in ['sqlite_sequence', 'sqlite_stat1'] or table_name.startswith('sqlite_'):
             continue
         elif cu.execute("SELECT COUNT(*) FROM {0}".format(table_name)).fetchone()[0] < 1:
             continue
         else:
-            pass
             #Ignorer CREATE TABLE
-            #yield('%s;' % sql)
+            pass
+            
 
         # TODO: Pendiente agrupar insert para una exportacion mas rapida.
 
