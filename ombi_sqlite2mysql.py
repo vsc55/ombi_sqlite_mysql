@@ -137,12 +137,16 @@ def _iterdump(connection, db_name):
     cu = connection.cursor()
 
     q = "SELECT name, type FROM sqlite_master WHERE sql NOT NULL AND type == 'table' ORDER BY "
-    
+
     # We control the order of tables so that the "INSERT" are in order and that there are related tables.
-    if db_name == "ExternalDatabase":
-        q += " name = 'EmbyEpisode', name = 'EmbyContent', name = 'PlexEpisode', name = 'PlexSeasonsContent', name = 'PlexServerContent'"
+    if db_name.lower() == "OmbiDatabase".lower():
+        # SELECT * FROM sqlite_master WHERE sql NOT NULL AND type == 'table' ORDER BY name = 'AspNetUsers' DESC,  name = 'ChildRequests' DESC,  name = 'MovieRequests' DESC, name = 'Issues' DESC, name = 'IssueComments' DESC, name ASC
+        q += "name = 'AspNetUsers' DESC,  name = 'ChildRequests' DESC,  name = 'MovieRequests' DESC, name = 'Issues' DESC, name = 'IssueComments' DESC, name ASC"
+    elif db_name.lower() == "ExternalDatabase".lower():
+        #SELECT * FROM sqlite_master WHERE sql NOT NULL AND type == 'table' ORDER BY name = 'EmbyContent' DESC, name = 'EmbyEpisode' DESC, name = 'PlexServerContent' DESC, name = 'PlexSeasonsContent' DESC, name = 'PlexEpisode' DESC, name ASC
+        q += "name = 'EmbyContent' DESC, name =  'EmbyEpisode' DESC, name = 'PlexServerContent' DESC, name = 'PlexSeasonsContent' DESC, name = 'PlexEpisode' DESC, name ASC"
     else:
-        q += ' "name"'
+        q += "name ASC"
 
     schema_res = cu.execute(q)
     for table_name, type in schema_res.fetchall():
