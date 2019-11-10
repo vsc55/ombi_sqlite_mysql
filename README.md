@@ -79,8 +79,8 @@ Plex:
 3. PlexEpisode
 
 Emby:
-1.EmbyContent
-2.EmbyEpisode
+1. EmbyContent
+2. EmbyEpisode
 
 
 And that seems to me to be everything.
