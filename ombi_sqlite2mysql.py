@@ -19,6 +19,7 @@ IGNOREDPREFIXES = [
     'INSERT OR REPLACE INTO "sqlite_sequence"',
 ]
 
+mysql_db_file = "data_ombi.mysql"
 json_db_file = ""
 json_db_data = []
 list_db = ['OmbiDatabase', 'SettingsDatabase', 'ExternalDatabase']
@@ -190,7 +191,7 @@ def _iterdump(connection):
 
 def _save_dump(opts, data):
     print ("Save dump:")
-    dump_db_file =  os.path.join(opts.config, "data_ombi.mysql")
+    dump_db_file =  os.path.join(opts.config, mysql_db_file)
     sys.stdout.write("- Keeping in ({0})... ".format(dump_db_file))
     try:
         with open(dump_db_file, 'w') as f:
