@@ -81,9 +81,5 @@ The script will empty the tables from the MySQL/MariaDB database and automatical
 ```
 $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host mysql.local --port 3306 --db Ombi --user ombi --passwd ombi
 ```
-**NOTE: It is recommended to use --force to empty all tables before migrating data.**
-```
-$ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host mysql.local --port 3306 --db Ombi --user ombi --passwd ombi --force
-```
 
 4. Start ombi and test if everything works fine.
