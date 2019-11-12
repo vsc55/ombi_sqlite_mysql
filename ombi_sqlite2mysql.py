@@ -281,6 +281,9 @@ def _mysql_disconnect(show_msg=True):
         if show_msg:
             print("Disconnect OK!")
 
+
+
+
 def _mysql_migration(data_dump):
     global mysql_conn
     global mysql_list_error
@@ -470,7 +473,7 @@ def _mysql_tables_clean():
         cur.close()
         cur = None
 
-def _mysql_database_json_update(opts):
+def _mysql_database_json_update(show_msg=True):
     json_data = {}
     for db_name in list_db:
         json_data[db_name] = {
@@ -478,7 +481,9 @@ def _mysql_database_json_update(opts):
             "ConnectionString": "Server={0};Port={1};Database={2};User={3};Password={4}".format(mysql_cfg['host'], mysql_cfg['port'], mysql_cfg['db'], mysql_cfg['user'], mysql_cfg['passwd'])
         }
     json_mysql = _get_path_file_in_conf(json_file_database)
-    _save_json(json_mysql, json_data)
+    _save_json(json_mysql, json_data, show_msg)
+
+
 
 def _sqlite_dump(opts):
     print("Dump SQLite:")
@@ -562,16 +567,20 @@ def _iterdump(connection, db_name):
             check_count_data[table_name] += 1
             yield("%s;" % q_insert)
 
-def _save_dump(opts, data):
-    print ("Save dump:")
-    dump_db_file =  _get_path_file_in_conf(mysql_db_file)
-    _save_file(dump_db_file, data)
 
-def _save_error_log(opts, data):
+
+def _save_dump(data, show_msg=True):
+    if show_msg:
+        print ("Save dump:")
+    dump_db_file =  _get_path_file_in_conf(mysql_db_file)
+    _save_file(dump_db_file, data, show_msg)
+
+def _save_error_log(data, show_msg=True):
     if data is not None and len(data) > 0:
-        print ("Save Log Error Mysql Insert:")
+        if show_msg:
+            print ("Save Log Error Mysql Insert:")
         log_file =  _get_path_file_in_conf(mysql_log_err)
-        _save_file(log_file, data)
+        _save_file(log_file, data, show_msg)
     
 
 
@@ -617,7 +626,7 @@ def main():
     check_count_data['__EFMigrationsHistory'] += 3
 
     if 1 == 1:
-        _save_dump(opts, data_dump)
+        _save_dump(data_dump)
     else:
         print (line)
 
@@ -633,7 +642,7 @@ def main():
         _mysql_disconnect()
 
         _mysql_database_json_update(opts)
-        _save_error_log(opts, mysql_list_error)        
+        _save_error_log(mysql_list_error)        
 
 
 if __name__ == "__main__":
