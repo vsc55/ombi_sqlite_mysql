@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Migration tool by SQLite to MySql/MariaDB for ombi
+# Migration tool from SQLite to MySql/MariaDB for ombi
 #
 # Copyright © 2019  Javier Pastor (aka VSC55)
 # <jpastor at cerebelum dot net>
