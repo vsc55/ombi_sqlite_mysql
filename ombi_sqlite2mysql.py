@@ -122,7 +122,6 @@ def _get_path_file_in_conf(file_name):
         return os.path.join(opts.config, file_name)
     else:
         return ""
-    
 
 def _find_in_json(json_data, find, def_return="", ignorecase=True):
     data_return = def_return
@@ -212,8 +211,8 @@ def _check_read_config():
         print ("Error: It is not necessary to update all databases are migrated.")
         sys.exit()
 
-def _check_config_mysql(opts):
-    #TODO: pendiente leer config de database.json
+def _check_config_mysql():
+    # TODO: pendiente leer config de database.json
     global mysql_cfg
     mysql_cfg = None
     if opts.host:
@@ -228,38 +227,59 @@ def _check_config_mysql(opts):
             'charset': 'utf8'
         }
 
-def _mysql_connect():
+def _mysql_IsConnect():
+    if mysql_conn is None:
+        return False
+    else:
+        # TODO: Pendiente mirar mas info .open.real
+        if mysql_conn.open.real == 1:
+            return True
+        else:
+            return False
+
+def _mysql_connect(show_msg=True):
     global mysql_conn
 
-    if mysql_cfg:
+    if mysql_cfg is None:
+        if show_msg:
+            print("No Config MySQL!")
+        return False
+
+    if _mysql_IsConnect:
         _mysql_disconnect()
+
+    if show_msg:
         print("Connecting mysql...")
+    try:
+        mysql_conn = MySQLdb.connect(**mysql_cfg)
+    except MySQLdb.Error, e:
         try:
-            mysql_conn = MySQLdb.connect(**mysql_cfg)
-            print("Connection OK!")
-
-        except MySQLdb.Error, e:
-            try:
-                print "MySQL Error [%d]: %s" % (e.args[0], e.args[1])
-                sys.exit()
-            except IndexError:
-                print "MySQL Error: %s" % str(e)
-                sys.exit()
-        except TypeError, e:
-            print(e)
+            print "MySQL Error [%d]: %s" % (e.args[0], e.args[1])
             sys.exit()
-        except ValueError, e:
-            print(e)
+        except IndexError:
+            print "MySQL Error: %s" % str(e)
             sys.exit()
+    except TypeError, e:
+        print(e)
+        sys.exit()
+    except ValueError, e:
+        print(e)
+        sys.exit()
 
-def _mysql_disconnect():
+    if show_msg:
+        print("Connection OK!")
+    return True
+ 
+def _mysql_disconnect(show_msg=True):
     global mysql_conn
 
     if mysql_conn is not None:
-        print("Disconnecting mysql...")
+        if show_msg:
+            print("Disconnecting mysql...")
         mysql_conn.close()
         mysql_conn = None
-        print("Disconnect OK!")
+        if show_msg:
+            print("Disconnect OK!")
 
 def _mysql_migration(data_dump):
     global mysql_conn
@@ -583,7 +603,7 @@ def main():
     _OptionParser()
     
     _check_read_config()
-    _check_config_mysql(opts)
+    _check_config_mysql()
 
 
     data_dump = []
