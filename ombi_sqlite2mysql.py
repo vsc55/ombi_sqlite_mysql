@@ -25,8 +25,12 @@ import time
 import codecs
 import json
 import sqlite3
+import copy
 import MySQLdb
+
 from optparse import OptionParser
+
+opts = None
 
 json_file_migration = "migration.json"
 json_file_database = "database.json"
@@ -67,7 +71,7 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 
 
 
-def _save_file(file_name, data):
+def _save_file(file_name, data, show_msg=True):
     sys.stdout.write("- Keeping in ({0})... ".format(file_name))
     try:
         with open(file_name, 'w') as f:
@@ -75,18 +79,21 @@ def _save_file(file_name, data):
                 f.write('%s\n' % line)
         
     except IOError as ex:
-        print(" ERROR!")
-        print("I/O error({0}): {1}".format(ex.errno, ex.strerror))
+        if show_msg:
+            print(" ERROR!")
+            print("I/O error({0}): {1}".format(ex.errno, ex.strerror))
         return False
     except:
-        print(" ERROR!")
-        print("Unexpected error:", sys.exc_info()[0])
+        if show_msg:
+            print(" ERROR!")
+            print("Unexpected error:", sys.exc_info()[0])
         return False
     else:
-        print("OK!")
+        if show_msg:
+            print("OK!")
         return True
 
-def _read_json(file_json, def_return=None):
+def _read_json(file_json, def_return=None, show_msg=True):
     return_date = def_return
     if os.path.isfile(file_json):
         try:
@@ -94,53 +101,115 @@ def _read_json(file_json, def_return=None):
             return_date = json.loads(f.read())
             f.close()
         except Exception as e:
-            print("Exception read json ({$1}):".format(file_json), e)
+            if show_msg:
+                print("Exception read json ({$1}):".format(file_json), e)
     return return_date
 
-def _save_json(file_json, data):
+def _save_json(file_json, data, show_msg=True):
     try:
         f = codecs.open(file_json, 'w', 'utf-8')
         f.write(json.dumps(data))
         f.close()
     except Exception as e:
-        print("Exception save json ({$1}):".format(file_json), e)
+        if show_msg:
+            print("Exception save json ({$1}):".format(file_json), e)
         return False
     return True
 
-def _check_read_config(opts):
+
+def _get_path_file_in_conf(file_name):
+    if opts is not None and opts.config and file_name:
+        return os.path.join(opts.config, file_name)
+    else:
+        return ""
+    
+
+def _find_in_json(json_data, find, def_return="", ignorecase=True):
+    data_return = def_return
+    if json_data and find:
+        work_dict = json_data
+
+        keys = []
+        if isinstance(find, str):
+            keys = find.split()
+        elif isinstance(find, list):
+            keys = copy.copy(find)
+        elif isinstance(find, tuple):
+            keys = list(find)
+        else:
+            return data_return
+        
+        while keys:
+            target = keys.pop(0)
+            if isinstance(work_dict, dict):
+                key_exist = False
+                new_value = None
+                for (key, value) in work_dict.items():
+                    if (key.lower() if ignorecase else key) == (target.lower() if ignorecase else target):
+                        key_exist = True
+                        new_value = value
+
+                if key_exist:
+                    if not keys:    # this is the last element in the find_key, and it is in the data_dict
+                        data_return = new_value
+                        break
+                    else:   # not the last element of find_key, change the temp var
+                        work_dict = new_value
+                else:
+                    continue
+            else:
+                continue
+
+    return data_return
+
+
+
+def _check_read_config():
     global json_db_data
     global list_db_process
 
-    if not opts.config:
-        print("Not select config path!!")
+    if opts is None:
+        print("Error: Args is Null!!")
         sys.exit()
+
+    elif not opts.config:
+        print("Error: Not select config path!!")
+        sys.exit()
+
     elif not os.path.isdir(opts.config):
-        print ("The config path does not exist or is not a directory !!")
+        print ("Error: The config path does not exist or is not a directory !!")
         sys.exit()
     
-    json_db = os.path.join(opts.config, json_file_migration)
+    json_db = _get_path_file_in_conf(json_file_migration)
     if not os.path.isfile(json_db):
-        print("File {0} not exist!!!".format(json_db))
+        print("Error: File {0} not exist!!!".format(json_db))
         sys.exit()
         
     json_db_data = _read_json(json_db)
     if json_db_data is None:
-        print ("Not data json read!!!!")
+        print ("Error: No data has been read from the json ({0}) file, please review it.!!!!".format(json_db))
         sys.exit()
     
     list_db_process = []
     print("Check {0}:".format(json_file_migration))
     for db_name in list_db:
-        if json_db_data[db_name]['Type'].lower() == "sqlite":
+        #if db_name not in json_db_data:
+        if db_name.lower() not in map(lambda name: name.lower(), json_db_data):
+            print("- {0} [No Config >> Skip]".format(db_name))
+            continue
+
+        type_db = _find_in_json(json_db_data, [db_name, 'type'])
+        if type_db.lower() == "SQLite".lower():
             list_db_process.append(db_name)
-            print("- {0} [SQLite]".format(db_name))
+            print("- {0} [SQLite >> Migrate]".format(db_name))
+        elif type_db.lower() == "MySQL".lower():
+            print("- {0} [MySQL >> Skip]".format(db_name))
         else:
-            pass
-            #print("- {0} [MYSQL]".format(db_name))
+            print("- {0} [{1} >> Unknown]".format(db_name, type_db))
     
     if len(list_db_process) == 0:
         print ("")
-        print ("It is not necessary to update all databases are migrated.")
+        print ("Error: It is not necessary to update all databases are migrated.")
         sys.exit()
 
 def _check_config_mysql(opts):
@@ -388,14 +457,14 @@ def _mysql_database_json_update(opts):
             "Type": "MySQL",
             "ConnectionString": "Server={0};Port={1};Database={2};User={3};Password={4}".format(mysql_cfg['host'], mysql_cfg['port'], mysql_cfg['db'], mysql_cfg['user'], mysql_cfg['passwd'])
         }
-    json_mysql = os.path.join(opts.config, json_file_database)
+    json_mysql = _get_path_file_in_conf(json_file_database)
     _save_json(json_mysql, json_data)
 
 def _sqlite_dump(opts):
     print("Dump SQLite:")
     for db_name in list_db_process:
         sys.stdout.write("- Exporting ({0})... ".format(db_name))
-        connection_str=json_db_data[db_name]['ConnectionString']
+        connection_str=_find_in_json(json_db_data, [db_name, 'ConnectionString'])
         if connection_str.split("=")[0].lower() != "data source":
             print ("Warning: {0} no location data source, ignorer database!".format(db_name))
             continue
@@ -475,22 +544,19 @@ def _iterdump(connection, db_name):
 
 def _save_dump(opts, data):
     print ("Save dump:")
-    dump_db_file =  os.path.join(opts.config, mysql_db_file)
+    dump_db_file =  _get_path_file_in_conf(mysql_db_file)
     _save_file(dump_db_file, data)
 
 def _save_error_log(opts, data):
     if data is not None and len(data) > 0:
         print ("Save Log Error Mysql Insert:")
-        log_file =  os.path.join(opts.config, mysql_log_err)
+        log_file =  _get_path_file_in_conf(mysql_log_err)
         _save_file(log_file, data)
     
 
 
-
-def main():
-    global check_count_data
-    global mysql_list_tables_no_clean
-
+def _OptionParser():
+    global opts
     op = OptionParser()
     op.add_option('-c', '--config', default="/etc/Ombi", help="path folder config ombi, default /etc/Ombi")
     op.add_option('', '--host', help="host server mysql/mariadb, If empty, file is generated with inserts.")
@@ -500,12 +566,23 @@ def main():
     op.add_option('', '--passwd', default="", help="passwd mysql/mariadb, defalt empty")
     op.add_option('-f', '--force', action="store_true",  default=False, help="force to clean all tables")
     opts, args = op.parse_args()
+    _OptionParser_apply()
+
+def _OptionParser_apply():
+    global mysql_list_tables_no_clean
 
     if opts.force:
         mysql_list_tables_no_clean = []
 
 
-    _check_read_config(opts)
+
+def main():
+    global opts
+    global check_count_data
+    
+    _OptionParser()
+    
+    _check_read_config()
     _check_config_mysql(opts)
 
 
