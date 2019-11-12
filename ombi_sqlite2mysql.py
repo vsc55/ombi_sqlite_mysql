@@ -22,12 +22,12 @@
 import sys
 import os
 import time
+import datetime
 import codecs
 import json
 import sqlite3
 import copy
 import MySQLdb
-
 from optparse import OptionParser
 
 opts = None
@@ -45,10 +45,8 @@ mysql_db_file = "data_ombi.mysql"
 mysql_log_err = "insert_error.log"
 mysql_cfg = None
 mysql_conn = None
-mysql_list_tables_no_clean = ['__EFMigrationsHistory']
+mysql_list_tables_save_backup = ['__EFMigrationsHistory']
 mysql_list_error = []
-
-
 
 def dump(obj):
   for attr in dir(obj):
@@ -293,9 +291,8 @@ def _mysql_migration(data_dump):
         
         cur = mysql_conn.cursor()
         cur.execute("SET FOREIGN_KEY_CHECKS = 0;")
-
+        
         count_commit = 0
-
         str_insert = "INSERT INTO"
         for i in progressbar(data_dump, "- Progress: ", 60):
             if i is None:
@@ -376,7 +373,8 @@ def _mysql_migration_check():
         cur = mysql_conn.cursor()
 
         q = "SET group_concat_max_len = 1024 * 1024 * 100;"
-        q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' Tables_in_database, COUNT(1) \"Number of Rows\" FROM ',db,'.',tb) SEPARATOR ' UNION '),') A;') INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE()) A;"
+        q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' Tables_in_database, COUNT(1) \"Number of Rows\" FROM ',db,'.',tb) SEPARATOR ' UNION '),') A;') "
+        q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
         q += "PREPARE s FROM @sql;"
         cur.execute(q)
 
@@ -385,12 +383,21 @@ def _mysql_migration_check():
         cur.execute(q)
         list_tables = cur.fetchall()
 
-        for table, count in list_tables:
-            if table in check_count_data and count != check_count_data[table]:
+        #for table, count in list_tables:
+        for i in progressbar(list_tables, "- Progress: ", 60):
+            table = i[0]
+            count = i[1]
+            count_sqlite = 0 
+            if not check_count_data is None and table in check_count_data:
+                count_sqlite = check_count_data[table]
+
+            if count != count_sqlite:
                 isOkMigration = False
-                print("- [ERR] -> {0} -> [SQLite ({1}) / MySQL ({2})] = {3}".format(table, check_count_data[table], count, check_count_data[table] - count))
+                # 80 = size + text ("- Progress: ")
+                print('{:<80}'.format("- [ERR] -> {0} -> [SQLite ({1}) / MySQL ({2})] = {3}".format(table, count_sqlite, count, count_sqlite - count)))
             else:
-                print("- [OK] -> {0}".format(table))
+                #print("- [OK] -> {0} ({1})".format(table, count))
+                pass
 
         cur.close()
         cur = None
@@ -423,7 +430,7 @@ def _mysql_tables_clean():
         #q += "`Table` = \"PlexServerContent\" DESC, `Table` = \"PlexSeasonsContent\" DESC, `Table` = \"PlexEpisode\" DESC, ";
         q += "`Table` ASC ";
         q += ";')"
-        q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE()) A;"
+        q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
         q += "PREPARE s FROM @sql;"
         cur.execute(q)
 
@@ -436,36 +443,44 @@ def _mysql_tables_clean():
         cur.execute("SET FOREIGN_KEY_CHECKS = 0;")
 
         for table, count in list_tables:
-            if table in mysql_list_tables_no_clean:
-                print("- [NOT CLEAN] -> {0}".format(table))
-                check_count_data[table] = count
+            if count == 0:
+                print("- [EMPTY] -> {0}".format(table))
                 continue
-            else:
-                if count == 0:
-                    print("- [EMPTY] -> {0}".format(table))
-                    continue
-                else:
-                    print("- [CLEANING] -> {0} -> rows: {1}".format(table, count))
-                    try:
-                        q = "TRUNCATE TABLE `{0}`;".format(table)
-                        cur.execute(q)
-                        mysql_conn.commit()
-                        
-                    except MySQLdb.Error, e:
-                        #mysql_conn.rollback()
-                        show_msg_err = True
-                        try:
-                            str_msg = "* MySQL Error [%d]: %s" % (e.args[0], e.args[1])
-                        except IndexError:
-                            str_msg = "* MySQL Error: %s" % str(e)
-                        
-                        mysql_list_error.append(str_msg)
-                        mysql_list_error.append(q)
-                        if show_msg_err:
-                            print str_msg
-                            print "* Query: {0}".format(q)
-                
 
+            try:
+                if table in mysql_list_tables_save_backup:
+                    #check_count_data[table] = count
+                    table_temp = "{0}_migration_backup_{1}".format(table, datetime.datetime.now().strftime("%Y%m%d%H%M%S_%f"))
+
+                    print("- [BACKUP] -> {0} in {1}".format(table, table_temp))
+
+                    q = "DROP TABLE IF EXISTS `{0}`;".format(table_temp)
+                    cur.execute(q)
+                    q = "CREATE TABLE `{0}` LIKE `{1}`;".format(table_temp, table)
+                    cur.execute(q)
+                    q = "INSERT INTO `{0}` SELECT * FROM `{1}`;".format(table_temp, table)
+                    cur.execute(q)
+                    
+                print("- [CLEANING] -> {0} -> rows: {1}".format(table, count))
+                q = "TRUNCATE TABLE `{0}`;".format(table)
+                cur.execute(q)
+
+                mysql_conn.commit()
+
+            except MySQLdb.Error, e:
+                #mysql_conn.rollback()
+                show_msg_err = True
+                try:
+                    str_msg = "* MySQL Error [%d]: %s" % (e.args[0], e.args[1])
+                except IndexError:
+                    str_msg = "* MySQL Error: %s" % str(e)
+                
+                mysql_list_error.append(str_msg)
+                mysql_list_error.append(q)
+                if show_msg_err:
+                    print str_msg
+                    print "* Query: {0}".format(q)
+                
         # Volvemos a activar la comprobacion de tablas relacionadas.
         cur.execute("SET FOREIGN_KEY_CHECKS = 1;")
 
@@ -593,16 +608,17 @@ def _OptionParser():
     op.add_option('', '--db', default="Ombi", help="name database, default Ombi")
     op.add_option('', '--user', default="ombi", help="user name mysql/mariadb, default ombi")
     op.add_option('', '--passwd', default="", help="passwd mysql/mariadb, defalt empty")
-    op.add_option('-f', '--force', action="store_true",  default=False, help="force to clean all tables")
+    op.add_option('', '--no_backup', action="store_true",  default=False, help="disable backup table __EFMigrationsHistory")
     opts, args = op.parse_args()
     _OptionParser_apply()
 
 def _OptionParser_apply():
-    global mysql_list_tables_no_clean
+    global mysql_list_tables_save_backup
 
-    if opts.force:
-        mysql_list_tables_no_clean = []
+    if opts.no_backup:
+        mysql_list_tables_save_backup = []
 
+    print ("mysql_list_tables_save_backup:",mysql_list_tables_save_backup)
 
 
 def main():
