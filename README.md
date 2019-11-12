@@ -79,7 +79,27 @@ $ emerge -va mysqlclient            # Gentoo
 3. Start data migration.
 The script will empty the tables from the MySQL/MariaDB database and automatically migrate the data from SQLite to MySQL/MariaDB.
 ```
-$ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host mysql.local --port 3306 --db Ombi --user ombi --passwd ombi
+$ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host 192.168.1.100 --db Ombi --user ombi --passwd ombi
 ```
 
 4. Start ombi and test if everything works fine.
+
+## Help
+```
+$ python2 ombi_sqlite2mysql.py -h
+Migration tool by SQLite to MySql/MariaDB for ombi (3.0) By VSC55
+
+Usage: ombi_sqlite2mysql.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -c CONFIG, --config=CONFIG
+                        path folder config ombi, default /etc/Ombi
+  --host=HOST           host server mysql/mariadb, If empty, file is generated
+                        with inserts.
+  --port=PORT           port server mysql/mariadb, default 3306
+  --db=DB               name database, default Ombi
+  --user=USER           user name mysql/mariadb, default ombi
+  --passwd=PASSWD       passwd mysql/mariadb, defalt empty
+  --no_backup           disable backup table __EFMigrationsHistory
+```
