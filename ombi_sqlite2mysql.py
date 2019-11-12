@@ -618,8 +618,6 @@ def _OptionParser_apply():
     if opts.no_backup:
         mysql_list_tables_save_backup = []
 
-    print ("mysql_list_tables_save_backup:",mysql_list_tables_save_backup)
-
 
 def main():
     global opts
