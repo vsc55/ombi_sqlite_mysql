@@ -87,7 +87,7 @@ $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host 192.168.1.100 --db Ombi --use
 ## Help
 ```
 $ python2 ombi_sqlite2mysql.py -h
-Migration tool by SQLite to MySql/MariaDB for ombi (3.0) By VSC55
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0) By VSC55
 
 Usage: ombi_sqlite2mysql.py [options]
 

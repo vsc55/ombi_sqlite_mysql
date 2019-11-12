@@ -662,6 +662,6 @@ def main():
 
 
 if __name__ == "__main__":
-    print("Migration tool by SQLite to MySql/MariaDB for ombi (3.0) By VSC55")
+    print("Migration tool from SQLite to MySql/MariaDB for ombi (3.0) By VSC55")
     print("")
     main()
