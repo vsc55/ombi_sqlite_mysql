@@ -94,12 +94,13 @@ Usage: ombi_sqlite2mysql.py [options]
 Options:
   -h, --help            show this help message and exit
   -c CONFIG, --config=CONFIG
-                        path folder config ombi, default /etc/Ombi
-  --host=HOST           host server mysql/mariadb, If empty, file is generated
-                        with inserts.
-  --port=PORT           port server mysql/mariadb, default 3306
-  --db=DB               name database, default Ombi
-  --user=USER           user name mysql/mariadb, default ombi
-  --passwd=PASSWD       passwd mysql/mariadb, defalt empty
-  --no_backup           disable backup table __EFMigrationsHistory
+                        Path folder config ombi, default /etc/Ombi.
+  --host=HOST           Host server MySQL/MariaDB. If not defined, a file is
+                        generated with INSERT queries.
+  --port=PORT           Port server MySQL/MariaDB, default 3306.
+  --db=DB               Name database, default Ombi.
+  --user=USER           User with access to MySQL/MariaDB, default ombi.
+  --passwd=PASSWD       User password for MySQL/MariaDB, defalt empty.
+  --no_backup           Disable the backup of the "__EFMigrationsHistory"
+                        table.
 ```

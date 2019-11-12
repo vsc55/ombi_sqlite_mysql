@@ -602,13 +602,13 @@ def _save_error_log(data, show_msg=True):
 def _OptionParser():
     global opts
     op = OptionParser()
-    op.add_option('-c', '--config', default="/etc/Ombi", help="path folder config ombi, default /etc/Ombi")
-    op.add_option('', '--host', help="host server mysql/mariadb, If empty, file is generated with inserts.")
-    op.add_option('', '--port', type="int", default=3306, help="port server mysql/mariadb, default 3306")
-    op.add_option('', '--db', default="Ombi", help="name database, default Ombi")
-    op.add_option('', '--user', default="ombi", help="user name mysql/mariadb, default ombi")
-    op.add_option('', '--passwd', default="", help="passwd mysql/mariadb, defalt empty")
-    op.add_option('', '--no_backup', action="store_true",  default=False, help="disable backup table __EFMigrationsHistory")
+    op.add_option('-c', '--config', default="/etc/Ombi", help="Path folder config ombi, default /etc/Ombi.")
+    op.add_option('', '--host', help="Host server MySQL/MariaDB. If not defined, a file is generated with INSERT queries.")
+    op.add_option('', '--port', type="int", default=3306, help="Port server MySQL/MariaDB, default 3306.")
+    op.add_option('', '--db', default="Ombi", help="Name database, default Ombi.")
+    op.add_option('', '--user', default="ombi", help="User with access to MySQL/MariaDB, default ombi.")
+    op.add_option('', '--passwd', default="", help="User password for MySQL/MariaDB, defalt empty.")
+    op.add_option('', '--no_backup', action="store_true",  default=False, help="Disable the backup of the \"__EFMigrationsHistory\" table.")
     opts, args = op.parse_args()
     _OptionParser_apply()
 
