@@ -454,8 +454,8 @@ def _mysql_tables_clean():
 
                     print("- [BACKUP] -> {0} in {1}".format(table, table_temp))
 
-                    q = "DROP TABLE IF EXISTS `{0}`;".format(table_temp)
-                    cur.execute(q)
+                    #q = "DROP TABLE IF EXISTS `{0}`;".format(table_temp)
+                    #cur.execute(q)
                     q = "CREATE TABLE `{0}` LIKE `{1}`;".format(table_temp, table)
                     cur.execute(q)
                     q = "INSERT INTO `{0}` SELECT * FROM `{1}`;".format(table_temp, table)
