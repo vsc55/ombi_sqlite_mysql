@@ -72,8 +72,8 @@ $ cd /etc/Ombi
 $ wget https://raw.githubusercontent.com/vsc55/ombi_sqlite_mysql/master/ombi_sqlite2mysql.py
 $ chmod +x ombi_sqlite2mysql.py
 
-$ apt-get install python-mysqldb 	# Debian/Ubuntu
-$ emerge -va mysqlclient			# Gentoo
+$ apt-get install python-mysqldb    # Debian/Ubuntu
+$ emerge -va mysqlclient            # Gentoo
 ```
 
 3. Start data migration.
