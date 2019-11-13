@@ -758,7 +758,8 @@ def _OptionParser():
     op.add_option('', '--only_db_json', action="store_true",  default=False, help="Only create or modify the file \"{0}\" with the parameters that we specify.".format(json_file_database))
     op.add_option('', '--only_manager_json', action="store_true",  default=False, help="Only create or modify the file \"{0}\" with the parameters that we specify.".format(json_file_migration))
     opts, _ = op.parse_args()
-    _OptionParser_apply()
+
+    return _OptionParser_apply()
 
 def _OptionParser_apply():
     global mysql_list_tables_save_backup
@@ -771,23 +772,28 @@ def _OptionParser_apply():
     if opts.force:
         mysql_list_tables_skip_clean = []
 
+    if opts.only_db_json or opts.only_manager_json:
+        if opts.only_db_json:
+            if mysql_cfg:
+                _mysql_database_json_update()
+            else:
+                print ("Unable to create file {0} missing required parameters.".format(json_file_database))
+
+        if opts.only_manager_json:
+            _manager_json_update(True)
+        return False
+
+    return True
+    
+
+
 def main():
-    global opts
     global check_count_data
     
-    _OptionParser()
+    if not _OptionParser():
+        return
 
-    if opts.only_db_json:
-        if mysql_cfg:
-            _mysql_database_json_update()
-        else:
-            print ("Unable to create file {0} missing required parameters.".format(json_file_database))
-            return
-
-    if opts.only_manager_json:
-        _manager_json_update(True)
-    else:
-        _manager_json_update()
+    _manager_json_update()
 
     if mysql_cfg:
         _mysql_connect()
