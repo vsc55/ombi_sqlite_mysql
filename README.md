@@ -63,6 +63,45 @@ Content "migration.json":
 The script will empty the tables from the MySQL/MariaDB database and automatically migrate the data from SQLite to MySQL/MariaDB.
 ```
 $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host 192.168.1.100 --db Ombi --user ombi --passwd ombi
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.1) By Javier Pastor
+
+Generate file /etc/Ombi/migration.json:
+- Keeping in (/etc/Ombi/migration.json)... [✓]
+
+MySQL > Connecting... [✓]
+Check migration.json:
+- SettingsDatabase [SQLite >> Migrate]
+- OmbiDatabase [SQLite >> Migrate]
+- ExternalDatabase [SQLite >> Migrate]
+
+Dump SQLite:
+- SettingsDatabase  [############################################################] 27/27
+- OmbiDatabase      [############################################################] 117106/117106
+- ExternalDatabase  [############################################################] 574/574
+
+Start clean tables:
+- [CLEAN ] -> ApplicationConfiguration -> rows: 3
+- [CLEAN ] -> AspNetRoles -> rows: 12
+- [CLEAN ] -> AspNetUserRoles -> rows: 18
+- [CLEAN ] -> AspNetUsers -> rows: 6
+- [CLEAN ] -> GlobalSettings -> rows: 12
+- [CLEAN ] -> NotificationTemplates -> rows: 90
+- [BACKUP] -> __EFMigrationsHistory
+- [SKIP  ] -> __EFMigrationsHistory -> rows: 3
+
+- Running   [############################################################] 8/8
+Clean tables [✓]
+
+Start Migration:
+- Preparing [############################################################] 117716/117716
+- Running   [############################################################] 117641/117641
+- Checking  [############################################################] 43/43
+
+Generate file database.json:
+- Keeping in (/etc/Ombi/database.json)... [✓]
+
+MySQL > Disconnecting... [✓]
+$
 ```
 4. Start ombi and test if everything works fine.
 
