@@ -33,7 +33,7 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 
 ## Data Migration
 1. In the directory where the Ombi databases are, we will create the file **"migration.json"**, in this file we will configure the databases that we want to export.
-```
+```json
 {
     "OmbiDatabase": {
         "Type":"sqlite",
@@ -50,7 +50,7 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 }
 ```
 If we do not want to export OmbiExternal.
-```
+```json
 {
     "OmbiDatabase": {
         "Type":"sqlite",
