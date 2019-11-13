@@ -19,6 +19,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+__author__ = "Javier Pastor"
+__copyright__ = "Copyright © 2019, Javier Pastor"
+__credits__ = "Javier Pastor"
+__license__ = "GPL"
+__version__ = "3.0.1"
+__maintainer__ = 'Javier Pastor'
+__email__ = "python@cerebelum.net"
+__status__ = "Development"
+
 import sys
 import os
 import time
@@ -46,6 +55,7 @@ mysql_log_err = "insert_error.log"
 mysql_cfg = None
 mysql_conn = None
 mysql_list_tables_save_backup = ['__EFMigrationsHistory']
+mysql_list_tables_skip_clean = ['__EFMigrationsHistory']
 mysql_list_error = []
 
 def dump(obj):
@@ -78,18 +88,19 @@ def _save_file(file_name, data, show_msg=True):
         
     except IOError as ex:
         if show_msg:
-            print(" ERROR!")
+            print("ERROR!!")
             print("I/O error({0}): {1}".format(ex.errno, ex.strerror))
         return False
     except Exception as e:
         if show_msg:
-            print(" ERROR!")
-            print("Unexpected error:", sys.exc_info()[0])
+            print("ERROR!!")
+            print("Unexpected error:", e)
+            #print("Unexpected error:", sys.exc_info()[0])
 
         return False
     else:
         if show_msg:
-            print("OK!")
+            print("[✓]")
         return True
 
 def _read_json(file_json, def_return=None, show_msg=True):
@@ -166,30 +177,32 @@ def _check_read_config():
     global json_db_data
     global list_db_process
 
+    print("Check {0}:".format(json_file_migration))
+
     if opts is None:
         print("Error: Args is Null!!")
-        sys.exit()
+        return False
 
     elif not opts.config:
         print("Error: Not select config path!!")
-        sys.exit()
+        return False
 
     elif not os.path.isdir(opts.config):
         print ("Error: The config path does not exist or is not a directory !!")
-        sys.exit()
+        return False
     
     json_db = _get_path_file_in_conf(json_file_migration)
     if not os.path.isfile(json_db):
         print("Error: File {0} not exist!!!".format(json_db))
-        sys.exit()
+        return False
         
     json_db_data = _read_json(json_db)
     if json_db_data is None:
         print ("Error: No data has been read from the json ({0}) file, please review it.!!!!".format(json_db))
-        sys.exit()
+        return False
     
     list_db_process = []
-    print("Check {0}:".format(json_file_migration))
+    
     for db_name in list_db:
         #if db_name not in json_db_data:
         if db_name.lower() not in map(lambda name: name.lower(), json_db_data):
@@ -205,10 +218,14 @@ def _check_read_config():
         else:
             print("- {0} [{1} >> Unknown]".format(db_name, type_db))
     
+    print ("")
     if len(list_db_process) == 0:
-        print ("")
         print ("Error: It is not necessary to update all databases are migrated.")
-        sys.exit()
+        return False
+
+    return True
+
+
 
 def _check_config_mysql():
     # TODO: pendiente leer config de database.json
@@ -289,7 +306,7 @@ def _mysql_disconnect(show_msg=True):
         if show_msg:
             print("[✓]")
 
-def _mysql_execute_querys(list_insert, progressbar_text="Progress: ", progressbar_size=60, run_commit=250, ignorer_error=[], DISABLE_FOREIGN_KEY_CHECKS=True, show_msg=True):
+def _mysql_execute_querys(list_insert, progressbar_text, progressbar_size, run_commit=250, ignorer_error=[], DISABLE_FOREIGN_KEY_CHECKS=True, show_msg=True):
     global mysql_conn
     global mysql_list_error
 
@@ -427,65 +444,57 @@ def _mysql_migration(data_dump):
             continue
         else:
             list_insert.append(i)
-            list_insert.append(i)
 
     # Error 1452 - Cannot add or update a child row: a foreign key constraint fails
     # Error 1062 - Duplicate entry
     isInsertOK = _mysql_execute_querys(list_insert, "- Running   ", 60, 500, [1452, 1062], True)
 
     if isInsertOK:
-        print ("Migration [✓]")
+        if _mysql_migration_check():
+            print("Migration [✓]")
     else:
-        print ("Migration [!!]")
-    
+        print("Migration [!!]")
+    print("")
+
     return isInsertOK
 
 def _mysql_migration_check():
-    global mysql_conn
-    global check_count_data
-    print("Check Migartion...")
-    
-    if mysql_conn is None:
-        isOkMigration = False
-    else:
-        isOkMigration = True
 
-        cur = mysql_conn.cursor()
+    if not _mysql_IsConnect:
+        return False
 
-        q = "SET group_concat_max_len = 1024 * 1024 * 100;"
-        q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' Tables_in_database, COUNT(1) \"Number of Rows\" FROM ',db,'.',tb) SEPARATOR ' UNION '),') A;') "
-        q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
-        q += "PREPARE s FROM @sql;"
-        cur.execute(q)
+    arr_query = []
 
-        # Si se ejecuta todo en el mismo execute no retorna datos!
-        q = "EXECUTE s; DEALLOCATE PREPARE s;"
-        cur.execute(q)
-        list_tables = cur.fetchall()
+    q = "SET group_concat_max_len = 1024 * 1024 * 100;"
+    q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' Tables_in_database, COUNT(1) \"Number of Rows\" FROM ',db,'.',tb) SEPARATOR ' UNION '),') A;') "
+    q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
+    q += "PREPARE s FROM @sql;"
+    arr_query.append(q)
 
-        #for table, count in list_tables:
-        for i in progressbar(list_tables, "- Progress: ", 60):
-            table = i[0]
-            count = i[1]
-            count_sqlite = 0
-            if check_count_data is not None and table in check_count_data:
-                count_sqlite = check_count_data[table]
+    # Si se ejecuta todo en el mismo execute no retorna datos!
+    q = "EXECUTE s; DEALLOCATE PREPARE s;"
+    arr_query.append(q)
 
-            if count != count_sqlite:
-                isOkMigration = False
-                # 80 = size + text ("- Progress: ")
-                print('{:<80}'.format("- [ERR] -> {0} -> [SQLite ({1}) / MySQL ({2})] = {3}".format(table, count_sqlite, count, count_sqlite - count)))
-            else:
-                #print("- [OK] -> {0} ({1})".format(table, count))
-                pass
+    return_query = _mysql_fetchall_querys(arr_query)
+    list_tables = return_query[1]
 
-        cur.close()
-        cur = None
+    isOkMigration = True
+    for i in progressbar(list_tables, "- Checking  ", 60):
+        table = i[0]
+        count = i[1]
+        count_sqlite = 0
+        if check_count_data is not None and table in check_count_data:
+            count_sqlite = check_count_data[table]
 
-        if isOkMigration:
-            print ("Check Migartion OK! :)")
+        if count != count_sqlite:
+            isOkMigration = False
+            # 80 = size + text ("- Running   "), pongo algo mas
+            print('{:<80}'.format("- [!!] -> {0} -> [SQLite ({1}) / MySQL ({2})] = {3}".format(table, count_sqlite, count, count_sqlite - count)))
         else:
-            print ("Migartion Failed!!! ;,,(")
+            #print("- [OK] -> {0} ({1})".format(table, count))
+            pass
+
+    return isOkMigration
 
 def _mysql_tables_clean():
     #global check_count_data
@@ -541,52 +550,66 @@ def _mysql_tables_clean():
             list_querys.append(q)
             q = "INSERT INTO `{0}` SELECT * FROM `{1}`;".format(table_temp, table)
             list_querys.append(q)
+
+        if table in mysql_list_tables_skip_clean:
+            print("- [SKIP  ] -> {0} -> rows: {1}".format(table, count))
+            continue
                 
-        print("- [CLEANING] -> {0} -> rows: {1}".format(table, count))
+        print("- [CLEAN ] -> {0} -> rows: {1}".format(table, count))
         q = "TRUNCATE TABLE `{0}`;".format(table)
         list_querys.append(q)
 
-
+    print("")
     isAllOk = _mysql_execute_querys(list_querys, "- Running   ", 60, 500, [], True)
 
     if isAllOk:
-        print ("Clean [✓]")
+        print ("Clean tables [✓]")
     else:
-        print ("Clean [!!]")
-    
+        print ("Clean tables [!!]")
+    print("")
+
     return isAllOk
 
 
-def _mysql_database_json_update(show_msg=True):
-    json_data = {}
-    for db_name in list_db:
-        json_data[db_name] = {
-            "Type": "MySQL",
-            "ConnectionString": "Server={0};Port={1};Database={2};User={3};Password={4}".format(mysql_cfg['host'], mysql_cfg['port'], mysql_cfg['db'], mysql_cfg['user'], mysql_cfg['passwd'])
-        }
-    json_mysql = _get_path_file_in_conf(json_file_database)
-    _save_json(json_mysql, json_data, show_msg)
+
+def _conver_str_sqlite_mysql(str_data):
+    str_data = str_data.replace('\\', '\\\\')
+    str_data = str_data.replace('"', '\\"')
+
+    #TODO: Lo dejo por si las moscas, pero casi seguro que sobra.
+    #str_data = str_data.replace(",'t'", ",'1'")
+    #str_data = str_data.replace(",'f'", ",'0'")
+
+    #line = line.replace('"', r'\"')
+    #line = line.replace('"', "'")
+    #line = re.sub(r"(?<!')'t'(?=.)", r"1", line)
+    #line = re.sub(r"(?<!')'f'(?=.)", r"0", line)
+    return str_data
 
 
-
-def _sqlite_dump(opts):
+def _sqlite_dump():
     print("Dump SQLite:")
+
     for db_name in list_db_process:
-        sys.stdout.write("- Exporting ({0})... ".format(db_name))
+        #print("- Exporting ({0}):".format(db_name))
+
         connection_str=_find_in_json(json_db_data, [db_name, 'ConnectionString'])
-        if connection_str.split("=")[0].lower() != "data source":
+        if connection_str.split("=")[0].lower() != "Data Source".lower():
             print ("Warning: {0} no location data source, ignorer database!".format(db_name))
             continue
-
+        
         yield('--')
         yield('-- DataBase: %s;' % db_name)
         yield('--')
 
         sqlite_db_file =  connection_str.split("=")[1]
         con = sqlite3.connect(sqlite_db_file)
-        for line in _iterdump(con, db_name):
-            yield line
-        print ("OK!")
+        data_get_sqlite = list(_iterdump(con, db_name))
+
+        for line in progressbar(data_get_sqlite, '{:<20}'.format("- {0} ".format(db_name)), 60):
+            yield(line)
+
+    print("")
 
 def _iterdump(connection, db_name):
     global check_count_data
@@ -638,33 +661,52 @@ def _iterdump(connection, db_name):
         query_res = cu.execute(q % {'tbl_name': table_name})
 
         for row in query_res:
-            q_insert = row[0].encode('utf-8')
-            q_insert = q_insert.replace('\\', '\\\\')
-            q_insert = q_insert.replace('"', '\\"')
-
-            #TODO: Lo dejo por si las moscas, pero casi seguro que sobra.
-            #q_insert = q_insert.replace(",'t'", ",'1'")
-            #q_insert = q_insert.replace(",'f'", ",'0'")
-
+            q_insert = _conver_str_sqlite_mysql(row[0].encode('utf-8'))
             q_insert = 'INSERT INTO `{0}` ({1}) VALUES({2})'.format(table_name, q_col, q_insert)
             check_count_data[table_name] += 1
             yield("%s;" % q_insert)
-
+    
+    cu.close()
+    cu = None
 
 
 def _save_dump(data, show_msg=True):
     if show_msg:
-        print ("Save dump:")
+        print ("Save Dump:")
+
     dump_db_file =  _get_path_file_in_conf(mysql_db_file)
-    _save_file(dump_db_file, data, show_msg)
+    data_return = _save_file(dump_db_file, data, show_msg)
+
+    if show_msg:
+        print("")
+
+    return data_return
 
 def _save_error_log(data, show_msg=True):
-    if data is not None and len(data) > 0:
-        if show_msg:
-            print ("Save Log Error Mysql Insert:")
-        log_file =  _get_path_file_in_conf(mysql_log_err)
-        _save_file(log_file, data, show_msg)
-    
+    if not data or len(data) == 0:
+        return True
+
+    if show_msg:
+        print ("Save Log Error Mysql Insert:")
+
+    log_file =  _get_path_file_in_conf(mysql_log_err)
+    data_return = _save_file(log_file, data, show_msg)
+
+    if show_msg:
+        print("")
+
+    return data_return
+
+def _mysql_database_json_update(show_msg=True):
+    json_data = {}
+    for db_name in list_db:
+        json_data[db_name] = {
+            "Type": "MySQL",
+            "ConnectionString": "Server={0};Port={1};Database={2};User={3};Password={4}".format(mysql_cfg['host'], mysql_cfg['port'], mysql_cfg['db'], mysql_cfg['user'], mysql_cfg['passwd'])
+        }
+    json_mysql = _get_path_file_in_conf(json_file_database)
+    _save_json(json_mysql, json_data, show_msg)
+
 
 
 def _OptionParser():
@@ -677,15 +719,21 @@ def _OptionParser():
     op.add_option('', '--user', default="ombi", help="User with access to MySQL/MariaDB, default ombi.")
     op.add_option('', '--passwd', default="", help="User password for MySQL/MariaDB, defalt empty.")
     op.add_option('', '--no_backup', action="store_true",  default=False, help="Disable the backup of the \"__EFMigrationsHistory\" table.")
-    opts, args = op.parse_args()
+    op.add_option('', '--save_dump', action="store_true",  default=False, help="Save all query insert in the file ({0}).".format(mysql_db_file))
+    op.add_option('', '--force', action="store_true",  default=False, help="Force clear all tables.")
+    opts, _ = op.parse_args()
     _OptionParser_apply()
 
 def _OptionParser_apply():
     global mysql_list_tables_save_backup
+    global mysql_list_tables_skip_clean
 
+    _check_config_mysql()
     if opts.no_backup:
         mysql_list_tables_save_backup = []
 
+    if opts.force:
+        mysql_list_tables_skip_clean = []
 
 def main():
     global opts
@@ -693,13 +741,13 @@ def main():
     
     _OptionParser()
     
-    _check_read_config()
-    _check_config_mysql()
+    if mysql_cfg:
+        _mysql_connect()
 
+    if not _check_read_config():
+        sys.exit()
 
-    data_dump = []
-    for line in _sqlite_dump(opts):
-        data_dump.append(line)
+    data_dump = list(_sqlite_dump())
 
     # Si no se aNaden da error al arrancar Ombi ya que intenta crear las tablas pero ya existen.
     data_dump.append("INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103213915_Inital', '2.2.6-servicing-10079');")
@@ -707,22 +755,19 @@ def main():
     data_dump.append("INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191102235852_Inital', '2.2.6-servicing-10079');")
     check_count_data['__EFMigrationsHistory'] += 3
 
-    if 1 == 1:
-        _save_dump(data_dump)
-    else:
-        print (line)
 
-    if mysql_cfg is not None:
-        _mysql_connect()
+    if opts.save_dump:
+        _save_dump(data_dump)
+
+    if _mysql_IsConnect:
         if _mysql_tables_clean():
             if _mysql_migration(data_dump):
-                _mysql_migration_check()
                 _mysql_database_json_update()
         
         _save_error_log(mysql_list_error)
         _mysql_disconnect()
 
 if __name__ == "__main__":
-    print("Migration tool from SQLite to MySql/MariaDB for ombi (3.0) By VSC55")
+    print("Migration tool from SQLite to MySql/MariaDB for ombi ({0}) By {1}".format(__version__, __author__))
     print("")
     main()
