@@ -21,7 +21,6 @@
 
 import sys
 import os
-import time
 import datetime
 import codecs
 import json
@@ -81,7 +80,7 @@ def _save_file(file_name, data, show_msg=True):
             print(" ERROR!")
             print("I/O error({0}): {1}".format(ex.errno, ex.strerror))
         return False
-    except:
+    except Exception as e:
         if show_msg:
             print(" ERROR!")
             print("Unexpected error:", sys.exc_info()[0])
@@ -100,7 +99,7 @@ def _read_json(file_json, def_return=None, show_msg=True):
             f.close()
         except Exception as e:
             if show_msg:
-                print("Exception read json ({$1}):".format(file_json), e)
+                print("Exception read json ({$0}):".format(file_json), e)
     return return_date
 
 def _save_json(file_json, data, show_msg=True):
@@ -110,7 +109,7 @@ def _save_json(file_json, data, show_msg=True):
         f.close()
     except Exception as e:
         if show_msg:
-            print("Exception save json ({$1}):".format(file_json), e)
+            print("Exception save json ({$0}):".format(file_json), e)
         return False
     return True
 
@@ -387,8 +386,8 @@ def _mysql_migration_check():
         for i in progressbar(list_tables, "- Progress: ", 60):
             table = i[0]
             count = i[1]
-            count_sqlite = 0 
-            if not check_count_data is None and table in check_count_data:
+            count_sqlite = 0
+            if check_count_data is not None and table in check_count_data:
                 count_sqlite = check_count_data[table]
 
             if count != count_sqlite:
@@ -402,7 +401,7 @@ def _mysql_migration_check():
         cur.close()
         cur = None
 
-        if isOkMigration == True:
+        if isOkMigration:
             print ("Check Migartion OK! :)")
         else:
             print ("Migartion Failed!!! ;,,(")
@@ -537,7 +536,7 @@ def _iterdump(connection, db_name):
         q += "name ASC"
 
     schema_res = cu.execute(q)
-    for table_name, type in schema_res.fetchall():
+    for table_name, _ in schema_res.fetchall():
         if table_name not in check_count_data:
             check_count_data[table_name] = 0
 
@@ -545,7 +544,6 @@ def _iterdump(connection, db_name):
             continue
         elif cu.execute("SELECT COUNT(*) FROM {0}".format(table_name)).fetchone()[0] < 1:
             continue
-                    
 
         # TODO: Pendiente agrupar insert para una exportacion mas rapida.
 
