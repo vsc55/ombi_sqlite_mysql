@@ -1,7 +1,7 @@
 # Migration procedure
 
 ## Create database and user in the server MySql/MariaDB
-```
+```mysql
 CREATE DATABASE IF NOT EXISTS `Ombi` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 CREATE USER 'ombi'@'%' IDENTIFIED BY 'ombi';
 GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
@@ -10,7 +10,7 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 ## Create and prepare tables
 1. Stop ombi
 2. Create or Modify **database.json** to use mysql.
-```
+```json
 {
   "OmbiDatabase": {
     "Type": "MySQL",
