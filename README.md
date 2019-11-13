@@ -1,17 +1,15 @@
-# Migration procedure:
+# Migration procedure
 
-
-## Create database and user in the server MySql/MariaDB:
+## Create database and user in the server MySql/MariaDB
 ```
 CREATE DATABASE IF NOT EXISTS `Ombi` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 CREATE USER 'ombi'@'%' IDENTIFIED BY 'ombi';
 GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 ```
 
-
-## Create and prepare tables:
+## Create and prepare tables
 1. Stop ombi
-2. Create or Modify database.json to use mysql.
+2. Create or Modify **database.json** to use mysql.
 ```
 {
   "OmbiDatabase": {
@@ -32,7 +30,6 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 4. We access the ombi website to finish generating the missing tables. ExternalDatabase tables are not created until they are first accessed.
    **No need to start the wizard, just access the web.**
 5. Stop ombi.
-
 
 ## Data Migration
 1. In the directory where the Ombi databases are, we will create the file **"migration.json"**, in this file we will configure the databases that we want to export.
@@ -87,7 +84,7 @@ $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host 192.168.1.100 --db Ombi --use
 ## Help
 ```
 $ python2 ombi_sqlite2mysql.py -h
-Migration tool from SQLite to MySql/MariaDB for ombi (3.0) By VSC55
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.1) By Javier Pastor
 
 Usage: ombi_sqlite2mysql.py [options]
 
@@ -103,4 +100,6 @@ Options:
   --passwd=PASSWD       User password for MySQL/MariaDB, defalt empty.
   --no_backup           Disable the backup of the "__EFMigrationsHistory"
                         table.
+  --save_dump           Save all query insert in the file (data_ombi.mysql).
+  --force               Force clear all tables.
 ```
