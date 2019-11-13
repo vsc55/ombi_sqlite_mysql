@@ -21,6 +21,7 @@
 
 import sys
 import os
+import time
 import datetime
 import codecs
 import json
@@ -84,6 +85,7 @@ def _save_file(file_name, data, show_msg=True):
         if show_msg:
             print(" ERROR!")
             print("Unexpected error:", sys.exc_info()[0])
+
         return False
     else:
         if show_msg:
@@ -99,7 +101,7 @@ def _read_json(file_json, def_return=None, show_msg=True):
             f.close()
         except Exception as e:
             if show_msg:
-                print("Exception read json ({$0}):".format(file_json), e)
+                print("Exception read json ({0}):".format(file_json), e)
     return return_date
 
 def _save_json(file_json, data, show_msg=True):
@@ -109,7 +111,7 @@ def _save_json(file_json, data, show_msg=True):
         f.close()
     except Exception as e:
         if show_msg:
-            print("Exception save json ({$0}):".format(file_json), e)
+            print("Exception save json ({0}):".format(file_json), e)
         return False
     return True
 
@@ -236,35 +238,44 @@ def _mysql_IsConnect():
 
 def _mysql_connect(show_msg=True):
     global mysql_conn
+    msg_err = None
 
     if mysql_cfg is None:
         if show_msg:
-            print("No Config MySQL!")
+            print("MySQL > No Config!")
         return False
 
     if _mysql_IsConnect:
         _mysql_disconnect()
 
     if show_msg:
-        print("Connecting mysql...")
+        #print("MySQL > Connecting...")
+        sys.stdout.write("MySQL > Connecting... ")
     try:
         mysql_conn = MySQLdb.connect(**mysql_cfg)
-    except MySQLdb.Error, e:
+        
+    except MySQLdb.Error as e:
         try:
-            print "MySQL Error [%d]: %s" % (e.args[0], e.args[1])
-            sys.exit()
-        except IndexError:
-            print "MySQL Error: %s" % str(e)
-            sys.exit()
-    except TypeError, e:
-        print(e)
+            msg_err = "* MySQL Error [{0}]: {1}".format(e.args[0], e.args[1])
+            
+        except IndexError as e:
+            msg_err = "* MySQL IndexError: {0}".format(str(e))
+            
+    except TypeError as e:
+        msg_err = "* MySQL TypeError: {0}".format(str(e))
+        
+    except ValueError as e:
+        msg_err =  "* MySQL ValueError: {0}".format(str(e))
+        
+    if msg_err:
+        if show_msg:
+            print("[!!]")
+            print(msg_err)
         sys.exit()
-    except ValueError, e:
-        print(e)
-        sys.exit()
-
+    
     if show_msg:
-        print("Connection OK!")
+        print("[✓]")
+
     return True
  
 def _mysql_disconnect(show_msg=True):
@@ -272,92 +283,162 @@ def _mysql_disconnect(show_msg=True):
 
     if mysql_conn is not None:
         if show_msg:
-            print("Disconnecting mysql...")
+            sys.stdout.write("MySQL > Disconnecting... ")
         mysql_conn.close()
         mysql_conn = None
         if show_msg:
-            print("Disconnect OK!")
+            print("[✓]")
 
+def _mysql_execute_querys(list_insert, progressbar_text="Progress: ", progressbar_size=60, run_commit=250, ignorer_error=[], DISABLE_FOREIGN_KEY_CHECKS=True, show_msg=True):
+    global mysql_conn
+    global mysql_list_error
+
+    if not _mysql_IsConnect:
+        #controlar si no hay conexion con mysql return false o sys.exit()
+        return False
+    
+    if list_insert is None or len(list_insert) == 0:
+        return True
+
+    cur = mysql_conn.cursor()
+    if DISABLE_FOREIGN_KEY_CHECKS:
+        # Desactivamos la comprobacion de tablas relacionadas.
+        cur.execute("SET FOREIGN_KEY_CHECKS = 0;")
+    
+    count_commit = 0
+    for i in progressbar(list_insert, progressbar_text, progressbar_size):
+        exit_is_error = False
+        show_msg_err = True
+        str_msg_err = None
+        try:
+            cur.execute(i)
+            if count_commit == run_commit:
+                mysql_conn.commit()
+                count_commit = 0
+            else:
+                count_commit += 1
+            
+        except MySQLdb.Error as e:
+            try:
+                str_msg_err = "* MySQL Error [{0}]: {1}".format(e.args[0], e.args[1])
+                if e.args[0] in ignorer_error:
+                    show_msg_err = False
+
+            except IndexError as e:
+                str_msg_err = "* MySQL IndexError: {0}".format(str(e))
+
+            #exit_is_error = True
+
+        except TypeError as e:
+            exit_is_error = True
+            str_msg_err = "* MySQL TypeError: {0}".format(str(e))
+
+        except ValueError as e:
+            exit_is_error = True
+            str_msg_err = "* MySQL ValueError: {0}".format(str(e))
+
+        if str_msg_err:
+            mysql_list_error.append(str_msg_err)
+            mysql_list_error.append(i)
+            if show_msg_err:
+                print("")
+                print(str_msg_err)
+                print("* Error Query: {0}".format(i))
+                print("")
+                time.sleep(0.25)
+
+        if exit_is_error:
+            return False
+
+    if count_commit > 0:
+        mysql_conn.commit()
+
+    if DISABLE_FOREIGN_KEY_CHECKS:
+        # Volvemos a activar la comprobacion de tablas relacionadas.
+        cur.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        
+    mysql_conn.commit()
+
+    cur.close()
+    cur = None
+    return True
+
+def _mysql_fetchall_querys(query):
+    global mysql_conn
+    global mysql_list_error
+
+    if not query or len(query) == 0:
+        return None
+
+    if not _mysql_IsConnect:
+        return None
+    
+    data_return = []
+    cur = mysql_conn.cursor()
+    for q in query:
+        str_msg_err = None
+        try:
+            cur.execute(q)
+            data_return.append(cur.fetchall())
+
+        except MySQLdb.Error as e:
+            try:
+                str_msg_err = "* MySQL Error [{0}]: {1}".format(e.args[0], e.args[1])
+
+            except IndexError as e:
+                str_msg_err = "* MySQL IndexError: {0}".format(str(e))
+
+        except TypeError as e:
+            str_msg_err = "* MySQL TypeError: {0}".format(str(e))
+
+        except ValueError as e:
+            str_msg_err = "* MySQL ValueError: {0}".format(str(e))
+
+        if str_msg_err:
+            data_return.append(None)
+            print("")
+            print(str_msg_err)
+            print("* Error Query: {0}".format(q))
+            print("")
+            time.sleep(0.25)
+
+    cur.close()
+    cur = None
+    return data_return
 
 
 
 def _mysql_migration(data_dump):
-    global mysql_conn
-    global mysql_list_error
+    if not _mysql_IsConnect:
+        return False
 
-    if mysql_conn is not None:
-        print ("Start Migration:")
-        
-        cur = mysql_conn.cursor()
-        cur.execute("SET FOREIGN_KEY_CHECKS = 0;")
-        
-        count_commit = 0
-        str_insert = "INSERT INTO"
-        for i in progressbar(data_dump, "- Progress: ", 60):
-            if i is None:
-                #print("Ignorer 1:", i)
-                continue
-            elif len(i) < len(str_insert):
-                #print("Ignorer 2:", i)
-                continue
-            elif i[:len(str_insert)].upper() != str_insert:
-                #print("Ignorer 3:", i)
-                continue
-            else:
-                try:
-                    cur.execute(i)
-                    if count_commit == 500:
-                        mysql_conn.commit()
-                        count_commit = 0
-                    else:
-                        count_commit += 1
-                    
-                except MySQLdb.Error, e:
-                    mysql_conn.rollback()
-                    show_msg_err = True
-                    try:
-                        str_msg = "* MySQL Error [%d]: %s" % (e.args[0], e.args[1])
-                        if e.args[0] == 1452:
-                            # Cannot add or update a child row: a foreign key constraint fails
-                            show_msg_err = False
-                        elif e.args[0] == 1062:
-                            #  Duplicate entry
-                            show_msg_err = False
+    print ("Start Migration:")
+    list_insert = []
+    str_insert = "INSERT INTO"
+    for i in progressbar(data_dump, "- Preparing ", 60):
+        if i is None:
+            #print("Ignorer 1:", i)
+            continue
+        elif len(i) < len(str_insert):
+            #print("Ignorer 2:", i)
+            continue
+        elif i[:len(str_insert)].upper() != str_insert:
+            #print("Ignorer 3:", i)
+            continue
+        else:
+            list_insert.append(i)
+            list_insert.append(i)
 
-                    except IndexError:
-                        str_msg = "* MySQL Error: %s" % str(e)
-                    
-                    mysql_list_error.append(str_msg)
-                    mysql_list_error.append(i)
-                    if show_msg_err:
-                        print str_msg
-                        print "* Query: {0}".format(i)
-                    
-                    #sys.exit()
-                    #time.sleep(1)
-                        
-                except TypeError, e:
-                    mysql_conn.rollback()
-                    print(e)
-                    print "Query: {0}".format(i)
-                    sys.exit()
+    # Error 1452 - Cannot add or update a child row: a foreign key constraint fails
+    # Error 1062 - Duplicate entry
+    isInsertOK = _mysql_execute_querys(list_insert, "- Running   ", 60, 500, [1452, 1062], True)
 
-                except ValueError, e:
-                    mysql_conn.rollback()
-                    print(e)
-                    print "Query: {0}".format(i)
-                    sys.exit()
-
-        if count_commit > 0:
-            mysql_conn.commit()
-        
-        cur.execute("SET FOREIGN_KEY_CHECKS = 1;")
-        print ("Migration completed.")
-
-        mysql_conn.commit()
-
-        cur.close()
-        cur = None
+    if isInsertOK:
+        print ("Migration [✓]")
+    else:
+        print ("Migration [!!]")
+    
+    return isInsertOK
 
 def _mysql_migration_check():
     global mysql_conn
@@ -407,85 +488,74 @@ def _mysql_migration_check():
             print ("Migartion Failed!!! ;,,(")
 
 def _mysql_tables_clean():
-    global mysql_conn
-    global check_count_data
+    #global check_count_data
 
-    print ("Clean tables...")
-    if mysql_conn is not None:
-        cur = mysql_conn.cursor()
+    if not _mysql_IsConnect:
+        return False
 
-        # TODO: Pendiente ver por que si no se vacia __EFMigrationsHistory no se importan todos los datos correctamente!!!!!!
+    print ("Start clean tables:")
+    arr_query = []
 
-        #Retorna datos no fiables, en ocasiones dice que hay 0 registros y si tiene registros.
-        #q = "SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}';".format(mysql_cfg['db'])
+    # TODO: Pendiente ver por que si no se vacia __EFMigrationsHistory no se importan todos los datos correctamente!!!!!!
 
-        q = "SET group_concat_max_len = 1024 * 1024 * 100;"
-        q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' `Table`, COUNT(1) `Rows` FROM ',db,'.',tb) SEPARATOR ' UNION '),') A "
-        q += "ORDER BY "
-        #q += "`Table` = \"__EFMigrationsHistory\" DESC, "
-        #q += "`Table` = \"AspNetUsers\" DESC, `Table` = \"ChildRequests\" DESC, `Table` = \"MovieRequests\" DESC, ";
-        #q += "`Table` = \"Issues\" DESC, `Table` = \"IssueComments\" DESC, `Table` = \"IssueCategory\" DESC, ";
-        #q += "`Table` = \"EmbyContent\" DESC, `Table` =  \"EmbyEpisode\" DESC, ";
-        #q += "`Table` = \"PlexServerContent\" DESC, `Table` = \"PlexSeasonsContent\" DESC, `Table` = \"PlexEpisode\" DESC, ";
-        q += "`Table` ASC ";
-        q += ";')"
-        q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
-        q += "PREPARE s FROM @sql;"
-        cur.execute(q)
+    #Retorna datos no fiables, en ocasiones dice que hay 0 registros y si tiene registros.
+    #q = "SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}';".format(mysql_cfg['db'])
 
-        # Si se ejecuta todo en el mismo execute no retorna datos!
-        q = "EXECUTE s; DEALLOCATE PREPARE s;"
-        cur.execute(q)
-        list_tables = cur.fetchall()
+    q = "SET group_concat_max_len = 1024 * 1024 * 100;"
+    q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' `Table`, COUNT(1) `Rows` FROM ',db,'.',tb) SEPARATOR ' UNION '),') A "
+    q += "ORDER BY "
 
-        # Desactivamos la comprobacion de tablas relacionadas.
-        cur.execute("SET FOREIGN_KEY_CHECKS = 0;")
+    # No hace falta ordenar las tablas ya que usamos DISABLE_FOREIGN_KEY_CHECKS.
+    #q += "`Table` = \"__EFMigrationsHistory\" DESC, "
+    #q += "`Table` = \"AspNetUsers\" DESC, `Table` = \"ChildRequests\" DESC, `Table` = \"MovieRequests\" DESC, "
+    #q += "`Table` = \"Issues\" DESC, `Table` = \"IssueComments\" DESC, `Table` = \"IssueCategory\" DESC, "
+    #q += "`Table` = \"EmbyContent\" DESC, `Table` =  \"EmbyEpisode\" DESC, "
+    #q += "`Table` = \"PlexServerContent\" DESC, `Table` = \"PlexSeasonsContent\" DESC, `Table` = \"PlexEpisode\" DESC, "
 
-        for table, count in list_tables:
-            if count == 0:
-                print("- [EMPTY] -> {0}".format(table))
-                continue
+    q += "`Table` ASC "
+    q += ";')"
+    q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
+    q += "PREPARE s FROM @sql;"
+    arr_query.append(q)
+    
+    # Si se ejecuta todo en el mismo execute no retorna datos!
+    q = "EXECUTE s; DEALLOCATE PREPARE s;"
+    arr_query.append(q)
 
-            try:
-                if table in mysql_list_tables_save_backup:
-                    #check_count_data[table] = count
-                    table_temp = "{0}_migration_backup_{1}".format(table, datetime.datetime.now().strftime("%Y%m%d%H%M%S_%f"))
+    return_query = _mysql_fetchall_querys(arr_query)
 
-                    print("- [BACKUP] -> {0} in {1}".format(table, table_temp))
+    list_querys = []
+    for table, count in return_query[1]:
+        if count == 0:
+            #print("- [EMPTY] -> {0}".format(table))
+            continue
+        
+        if table in mysql_list_tables_save_backup:
+            #check_count_data[table] = count
+            table_temp = "{0}_migration_backup_{1}".format(table, datetime.datetime.now().strftime("%Y%m%d%H%M%S_%f"))
 
-                    #q = "DROP TABLE IF EXISTS `{0}`;".format(table_temp)
-                    #cur.execute(q)
-                    q = "CREATE TABLE `{0}` LIKE `{1}`;".format(table_temp, table)
-                    cur.execute(q)
-                    q = "INSERT INTO `{0}` SELECT * FROM `{1}`;".format(table_temp, table)
-                    cur.execute(q)
-                    
-                print("- [CLEANING] -> {0} -> rows: {1}".format(table, count))
-                q = "TRUNCATE TABLE `{0}`;".format(table)
-                cur.execute(q)
-
-                mysql_conn.commit()
-
-            except MySQLdb.Error, e:
-                #mysql_conn.rollback()
-                show_msg_err = True
-                try:
-                    str_msg = "* MySQL Error [%d]: %s" % (e.args[0], e.args[1])
-                except IndexError:
-                    str_msg = "* MySQL Error: %s" % str(e)
+            #print("- [BACKUP] -> {0} in {1}".format(table, table_temp))
+            print("- [BACKUP] -> {0}".format(table))
+            
+            q = "CREATE TABLE `{0}` LIKE `{1}`;".format(table_temp, table)
+            list_querys.append(q)
+            q = "INSERT INTO `{0}` SELECT * FROM `{1}`;".format(table_temp, table)
+            list_querys.append(q)
                 
-                mysql_list_error.append(str_msg)
-                mysql_list_error.append(q)
-                if show_msg_err:
-                    print str_msg
-                    print "* Query: {0}".format(q)
-                
-        # Volvemos a activar la comprobacion de tablas relacionadas.
-        cur.execute("SET FOREIGN_KEY_CHECKS = 1;")
+        print("- [CLEANING] -> {0} -> rows: {1}".format(table, count))
+        q = "TRUNCATE TABLE `{0}`;".format(table)
+        list_querys.append(q)
 
-        mysql_conn.commit()
-        cur.close()
-        cur = None
+
+    isAllOk = _mysql_execute_querys(list_querys, "- Running   ", 60, 500, [], True)
+
+    if isAllOk:
+        print ("Clean [✓]")
+    else:
+        print ("Clean [!!]")
+    
+    return isAllOk
+
 
 def _mysql_database_json_update(show_msg=True):
     json_data = {}
@@ -644,18 +714,13 @@ def main():
 
     if mysql_cfg is not None:
         _mysql_connect()
-        _mysql_tables_clean()
-
+        if _mysql_tables_clean():
+            if _mysql_migration(data_dump):
+                _mysql_migration_check()
+                _mysql_database_json_update()
         
-        #time.sleep(5)
-
-        _mysql_migration(data_dump)
-        _mysql_migration_check()
+        _save_error_log(mysql_list_error)
         _mysql_disconnect()
-
-        _mysql_database_json_update(opts)
-        _save_error_log(mysql_list_error)        
-
 
 if __name__ == "__main__":
     print("Migration tool from SQLite to MySql/MariaDB for ombi (3.0) By VSC55")
