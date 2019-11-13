@@ -45,7 +45,7 @@ json_file_migration = "migration.json"
 json_file_database = "database.json"
 json_db_file = ""
 json_db_data = None
-list_db = ['OmbiDatabase', 'SettingsDatabase', 'ExternalDatabase']
+list_db = {'OmbiDatabase':'Ombi.db', 'SettingsDatabase':'OmbiSettings.db', 'ExternalDatabase':'OmbiExternal.db'}
 list_db_process = None
 
 check_count_data = {}
@@ -80,7 +80,9 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 
 
 def _save_file(file_name, data, show_msg=True):
-    sys.stdout.write("- Keeping in ({0})... ".format(file_name))
+    if show_msg:
+        sys.stdout.write("- Keeping in ({0})... ".format(file_name))
+
     try:
         with open(file_name, 'w') as f:
             for line in data:
@@ -88,12 +90,12 @@ def _save_file(file_name, data, show_msg=True):
         
     except IOError as ex:
         if show_msg:
-            print("ERROR!!")
+            print("[!!]")
             print("I/O error({0}): {1}".format(ex.errno, ex.strerror))
         return False
     except Exception as e:
         if show_msg:
-            print("ERROR!!")
+            print("[!!]")
             print("Unexpected error:", e)
             #print("Unexpected error:", sys.exc_info()[0])
 
@@ -116,14 +118,19 @@ def _read_json(file_json, def_return=None, show_msg=True):
     return return_date
 
 def _save_json(file_json, data, show_msg=True):
+    if show_msg:
+        sys.stdout.write("- Keeping in ({0})... ".format(file_json))
     try:
         f = codecs.open(file_json, 'w', 'utf-8')
         f.write(json.dumps(data))
         f.close()
     except Exception as e:
         if show_msg:
+            print("[!!]")
             print("Exception save json ({0}):".format(file_json), e)
         return False
+    if show_msg:
+        print("[✓]")
     return True
 
 
@@ -705,7 +712,34 @@ def _mysql_database_json_update(show_msg=True):
             "ConnectionString": "Server={0};Port={1};Database={2};User={3};Password={4}".format(mysql_cfg['host'], mysql_cfg['port'], mysql_cfg['db'], mysql_cfg['user'], mysql_cfg['passwd'])
         }
     json_mysql = _get_path_file_in_conf(json_file_database)
+    if show_msg:
+        print("Generate file {0}:".format(json_file_database))
     _save_json(json_mysql, json_data, show_msg)
+    if show_msg:
+        print("")
+
+def _manager_json_update(overwrite=False, show_msg=True):
+    json_file = _get_path_file_in_conf(json_file_migration)
+    if not overwrite:
+        if os.path.isfile(json_file):
+            return
+
+    json_data = {}
+    for db_name in list_db:
+        db_file = _get_path_file_in_conf(list_db[db_name])
+        if not os.path.isfile(db_file):
+            continue
+        json_data[db_name] = {
+            "Type": "sqlite",
+            "ConnectionString": "Data Source={0}".format(db_file)
+        }
+
+    if show_msg:
+        print("Generate file {0}:".format(json_file))
+
+    _save_json(json_file, json_data, show_msg)
+    if show_msg:
+        print("")
 
 
 
@@ -719,8 +753,10 @@ def _OptionParser():
     op.add_option('', '--user', default="ombi", help="User with access to MySQL/MariaDB, default ombi.")
     op.add_option('', '--passwd', default="", help="User password for MySQL/MariaDB, defalt empty.")
     op.add_option('', '--no_backup', action="store_true",  default=False, help="Disable the backup of the \"__EFMigrationsHistory\" table.")
-    op.add_option('', '--save_dump', action="store_true",  default=False, help="Save all query insert in the file ({0}).".format(mysql_db_file))
+    op.add_option('', '--save_dump', action="store_true",  default=False, help="Save all query insert in the file \"{0}\".".format(mysql_db_file))
     op.add_option('', '--force', action="store_true",  default=False, help="Force clear all tables.")
+    op.add_option('', '--only_db_json', action="store_true",  default=False, help="Only create or modify the file \"{0}\" with the parameters that we specify.".format(json_file_database))
+    op.add_option('', '--only_manager_json', action="store_true",  default=False, help="Only create or modify the file \"{0}\" with the parameters that we specify.".format(json_file_migration))
     opts, _ = op.parse_args()
     _OptionParser_apply()
 
@@ -740,13 +776,25 @@ def main():
     global check_count_data
     
     _OptionParser()
-    
+
+    if opts.only_db_json:
+        if mysql_cfg:
+            _mysql_database_json_update()
+        else:
+            print ("Unable to create file {0} missing required parameters.".format(json_file_database))
+            return
+
+    if opts.only_manager_json:
+        _manager_json_update(True)
+    else:
+        _manager_json_update()
+
     if mysql_cfg:
         _mysql_connect()
 
     if not _check_read_config():
-        sys.exit()
-
+        return
+    
     data_dump = list(_sqlite_dump())
 
     # Si no se aNaden da error al arrancar Ombi ya que intenta crear las tablas pero ya existen.
