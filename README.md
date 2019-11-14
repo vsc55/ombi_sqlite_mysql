@@ -11,7 +11,8 @@ GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 ## Download Script and install dependencies
 1. Download the script.
 ```
-$ wget https://raw.githubusercontent.com/vsc55/ombi_sqlite_mysql/master/ombi_sqlite2mysql.py
+$ git clone https://github.com/vsc55/ombi_sqlite_mysql.git ombi_sqlite_mysql
+$ cd ombi_sqlite_mysql
 $ chmod +x ombi_sqlite2mysql.py
 ```
 2. Install the dependencies according to the operating system we use.

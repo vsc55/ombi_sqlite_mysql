@@ -41,6 +41,8 @@ from optparse import OptionParser
 
 opts = None
 
+global_progressbar_size = 60
+
 json_file_migration = "migration.json"
 json_file_database = "database.json"
 json_db_file = ""
@@ -58,6 +60,49 @@ mysql_list_tables_save_backup = ['__EFMigrationsHistory']
 mysql_list_tables_skip_clean = ['__EFMigrationsHistory']
 mysql_list_error = []
 
+fix_insert = {
+    "__EFMigrationsHistory": {
+        "id": "MigrationId",
+        "required":{
+            "20191103213915_Inital": {
+                "data": {
+                    "MigrationId": "20191103213915_Inital",
+                    "ProductVersion": "2.2.6-servicing-10079"
+                },
+                "AcctionIsExistSQLite": "del",
+                "isExistSQLite": False,
+                "isExistMySQL": False
+            },
+            "20191103205915_Inital": {
+                "data": {
+                    "MigrationId": "20191103205915_Inital",
+                    "ProductVersion": "2.2.6-servicing-10079"
+                },
+                "AcctionIsExistSQLite": "del",
+                "isExistSQLite": False,
+                "isExistMySQL": False
+            },
+            "20191102235852_Inital": {
+                "data": {
+                    "MigrationId": "20191102235852_Inital",
+                    "ProductVersion": "2.2.6-servicing-10079"
+                },
+                "AcctionIsExistSQLite": "del",
+                "isExistSQLite": False,
+                "isExistMySQL": False,
+            }
+        },
+        "mysql": {
+            "ls_column": [],
+            "ls_data": [],
+            "ls_id": [],
+            "data": []
+        }
+    }
+}
+
+
+
 def dump(obj):
   for attr in dir(obj):
     print("obj.%s = %r" % (attr, getattr(obj, attr)))
@@ -66,9 +111,19 @@ def dump(obj):
 # https://stackoverflow.com/questions/3160699/python-progress-bar
 def progressbar(it, prefix="", size=60, file=sys.stdout):
     count = len(it)
+
+    def size_console():
+        rows, columns = os.popen('stty size', 'r').read().split()
+        return int(columns), int(rows)
+
     def show(j):
-        x = int(size*j/count)
-        file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size-x), j, count))
+        if str(size).lower() == "auto".lower():
+            size_fix = int(size_console()[0]) - len(prefix) - (len(str(count))*2) - 4 - 5
+        else:
+            size_fix = size
+
+        x = int(size_fix*j/count)
+        file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size_fix-x), j, count))
         file.flush()        
     show(0)
     for i, item in enumerate(it):
@@ -313,7 +368,7 @@ def _mysql_disconnect(show_msg=True):
         if show_msg:
             print("[✓]")
 
-def _mysql_execute_querys(list_insert, progressbar_text, progressbar_size, run_commit=250, ignorer_error=[], DISABLE_FOREIGN_KEY_CHECKS=True, show_msg=True):
+def _mysql_execute_querys(list_insert, progressbar_text, progressbar_size="auto", run_commit=250, ignorer_error=[], DISABLE_FOREIGN_KEY_CHECKS=True, show_msg=True):
     global mysql_conn
     global mysql_list_error
 
@@ -387,7 +442,7 @@ def _mysql_execute_querys(list_insert, progressbar_text, progressbar_size, run_c
     cur = None
     return True
 
-def _mysql_fetchall_querys(query):
+def _mysql_fetchall_querys(query, ignorer_error=[]):
     global mysql_conn
     global mysql_list_error
 
@@ -401,6 +456,7 @@ def _mysql_fetchall_querys(query):
     cur = mysql_conn.cursor()
     for q in query:
         str_msg_err = None
+        show_msg_err = True
         try:
             cur.execute(q)
             data_return.append(cur.fetchall())
@@ -408,6 +464,8 @@ def _mysql_fetchall_querys(query):
         except MySQLdb.Error as e:
             try:
                 str_msg_err = "* MySQL Error [{0}]: {1}".format(e.args[0], e.args[1])
+                if e.args[0] in ignorer_error:
+                    show_msg_err = False
 
             except IndexError as e:
                 str_msg_err = "* MySQL IndexError: {0}".format(str(e))
@@ -420,11 +478,12 @@ def _mysql_fetchall_querys(query):
 
         if str_msg_err:
             data_return.append(None)
-            print("")
-            print(str_msg_err)
-            print("* Error Query: {0}".format(q))
-            print("")
-            time.sleep(0.25)
+            if show_msg_err:
+                print("")
+                print(str_msg_err)
+                print("* Error Query: {0}".format(q))
+                print("")
+                time.sleep(0.25)
 
     cur.close()
     cur = None
@@ -439,7 +498,7 @@ def _mysql_migration(data_dump):
     print ("Start Migration:")
     list_insert = []
     str_insert = "INSERT INTO"
-    for i in progressbar(data_dump, "- Preparing ", 60):
+    for i in progressbar(data_dump, "- Preparing ", global_progressbar_size):
         if i is None:
             #print("Ignorer 1:", i)
             continue
@@ -454,7 +513,7 @@ def _mysql_migration(data_dump):
 
     # Error 1452 - Cannot add or update a child row: a foreign key constraint fails
     # Error 1062 - Duplicate entry
-    isInsertOK = _mysql_execute_querys(list_insert, "- Running   ", 60, 500, [1452, 1062], True)
+    isInsertOK = _mysql_execute_querys(list_insert, "- Running   ", global_progressbar_size, 500, [1452, 1062], True)
 
     if isInsertOK:
         if _mysql_migration_check():
@@ -486,7 +545,7 @@ def _mysql_migration_check():
     list_tables = return_query[1]
 
     isOkMigration = True
-    for i in progressbar(list_tables, "- Checking  ", 60):
+    for i in progressbar(list_tables, "- Checking  ", global_progressbar_size):
         table = i[0]
         count = i[1]
         count_sqlite = 0
@@ -504,7 +563,7 @@ def _mysql_migration_check():
     return isOkMigration
 
 def _mysql_tables_clean():
-    #global check_count_data
+    global check_count_data
 
     if not _mysql_IsConnect:
         return False
@@ -547,7 +606,6 @@ def _mysql_tables_clean():
             continue
         
         if table in mysql_list_tables_save_backup:
-            #check_count_data[table] = count
             table_temp = "{0}_migration_backup_{1}".format(table, datetime.datetime.now().strftime("%Y%m%d%H%M%S_%f"))
 
             #print("- [BACKUP] -> {0} in {1}".format(table, table_temp))
@@ -559,6 +617,10 @@ def _mysql_tables_clean():
             list_querys.append(q)
 
         if table in mysql_list_tables_skip_clean:
+            if table not in check_count_data:
+                check_count_data[table] = 0
+
+            check_count_data[table] += count
             print("- [SKIP  ] -> {0} -> rows: {1}".format(table, count))
             continue
                 
@@ -567,7 +629,7 @@ def _mysql_tables_clean():
         list_querys.append(q)
 
     print("")
-    isAllOk = _mysql_execute_querys(list_querys, "- Running   ", 60, 500, [], True)
+    isAllOk = _mysql_execute_querys(list_querys, "- Running   ", global_progressbar_size, 500, [], True)
 
     if isAllOk:
         print ("Clean tables [✓]")
@@ -595,8 +657,10 @@ def _conver_str_sqlite_mysql(str_data):
 
 
 def _sqlite_dump():
-    print("Dump SQLite:")
+    global fix_insert
+    global check_count_data
 
+    print("Dump SQLite:")
     for db_name in list_db_process:
         #print("- Exporting ({0}):".format(db_name))
 
@@ -613,9 +677,50 @@ def _sqlite_dump():
         con = sqlite3.connect(sqlite_db_file)
         data_get_sqlite = list(_iterdump(con, db_name))
 
-        for line in progressbar(data_get_sqlite, '{:<20}'.format("- {0} ".format(db_name)), 60):
+        for line in progressbar(data_get_sqlite, '{:<20}'.format("- {0} ".format(db_name)), global_progressbar_size):
             yield(line)
 
+    #required insert
+    
+    # Si no se aNaden da error al arrancar Ombi ya que intenta crear las tablas pero ya existen.
+    #INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103213915_Inital', '2.2.6-servicing-10079');
+    #INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103205915_Inital', '2.2.6-servicing-10079');
+    #INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191102235852_Inital', '2.2.6-servicing-10079');
+
+    #yield "INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103213915_Inital', '2.2.6-servicing-10079');"
+    #yield "INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103205915_Inital', '2.2.6-servicing-10079');"
+    #yield "INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191102235852_Inital', '2.2.6-servicing-10079');"
+    #check_count_data['__EFMigrationsHistory'] -= 3
+
+    for key, val in fix_insert.items():
+        if key not in check_count_data:
+                check_count_data[key] = 0
+
+        yield('--')
+        yield('-- Required Insert: %s;' % key)
+        yield('--')
+
+        
+        for _, req_val in val['required'].items():
+            if req_val['isExistMySQL'] == True:
+                continue
+
+            if len(req_val['data']) > 0:
+                q_col = ""
+                q_val = ""
+                for data_key, data_val in req_val['data'].items():
+
+                    if len(q_col) > 0:
+                        q_col += ", "
+                    q_col += '`{0}`'.format(data_key)
+
+                    if len(q_val) > 0:
+                        q_val += ", "
+                    q_val += "'{0}'".format(data_val)
+
+                q = 'INSERT INTO `{0}` ({1}) VALUES({2});'.format(key, q_col, q_val)
+                yield q
+                check_count_data[key] += 1
     print("")
 
 def _iterdump(connection, db_name):
@@ -669,12 +774,103 @@ def _iterdump(connection, db_name):
 
         for row in query_res:
             q_insert = _conver_str_sqlite_mysql(row[0].encode('utf-8'))
+
+            q_insert = _iterdump_fix_insert(q_insert, q_col, table_name)
+            if not q_insert:
+                continue
+
             q_insert = 'INSERT INTO `{0}` ({1}) VALUES({2})'.format(table_name, q_col, q_insert)
             check_count_data[table_name] += 1
             yield("%s;" % q_insert)
     
     cu.close()
     cu = None
+
+
+def _iterdump_fix_insert(q, q_col, table_name):
+    global fix_insert
+    
+    if table_name in fix_insert:
+        v = fix_insert[table_name]
+
+        for _, v_sub in v['required'].items():
+            isEqual = True
+            for _, v_data in v_sub['data'].items():
+                if v_data not in q:
+                    isEqual = False
+                    break
+
+            if isEqual:
+                v_sub["isExistSQLite"] = True
+                if v_sub["AcctionIsExistSQLite"] == "del":
+                    return None
+        
+        # eliminamos el simbolo ` que tiene cada nombre de columna a los lados.
+        ls_col = str(q_col).replace("`","").split(",")
+        id_col = str(v['id'])
+        
+        if id_col in ls_col:
+            index_col_id = ls_col.index(id_col)
+            val_id = str(q).split(",")[index_col_id]
+
+            # Detecta si tiene comillas simples a los lados y las elimina poder hacer la compracion con mysql->ls_id.
+            #val_id = val_id[(1 if val_id[:1] == "'" else None):(-1 if val_id[-1:] == "'" else None)]
+            if val_id[:1] == "'" and val_id[-1:] == "'":
+                val_id = val_id[1:-1]
+            
+            #val_id = id del la consulta que nos ha llegado en q.
+            if len(val_id) > 0:
+                if val_id in v['mysql']['ls_id']:
+                    # Si exite en mysql no la necesitamos.
+                    return None
+        else:
+            # No se encuntra columna ID asi que pasamos.
+            pass
+        
+    return q
+
+
+
+def _fix_insert_read_mysql():
+    global fix_insert
+
+    for k, v in fix_insert.items():
+        ls_query = []
+        q = "SHOW columns FROM `{0}`;".format(k)
+        ls_query.append(q)
+        q = "SELECT * FROM `{0}`;".format(k)
+        ls_query.append(q)
+        return_querys = _mysql_fetchall_querys(ls_query, [1146])
+
+        if not return_querys[0]:
+            print("Error: Table \"{0}\" requiered is not exist in the server MySQL!").format(k)
+            return False
+
+        ls_column = []
+        for i in return_querys[0]:
+            ls_column.append(i[0])
+
+        ls_data = return_querys[1]
+        ls_ids = []
+        data = []
+        for i in ls_data:
+            line = {}
+            n_col = 0
+            for ii in i:
+                col_name = ls_column[n_col]
+                if col_name == v['id']:
+                    ls_ids.append(ii)
+                    if ii in v['required']:
+                        v['required'][ii]['isExistMySQL'] = True
+                line[col_name] = ii
+                n_col += 1
+            data.append(line)
+
+        v['mysql']['ls_column'] = ls_column
+        v['mysql']['ls_data'] = ls_data
+        v['mysql']['ls_id'] = ls_ids
+        v['mysql']['data'] = data
+    return True
 
 
 def _save_dump(data, show_msg=True):
@@ -797,21 +993,16 @@ def main():
 
     if mysql_cfg:
         _mysql_connect()
+        if not opts.force:
+            if not _fix_insert_read_mysql():
+                _mysql_disconnect()
+                return
 
     if not _check_read_config():
+        _mysql_disconnect()
         return
-    
+
     data_dump = list(_sqlite_dump())
-
-    # Si no se aNaden da error al arrancar Ombi ya que intenta crear las tablas pero ya existen.
-    data_dump.append("INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103213915_Inital', '2.2.6-servicing-10079');")
-    data_dump.append("INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103205915_Inital', '2.2.6-servicing-10079');")
-    data_dump.append("INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191102235852_Inital', '2.2.6-servicing-10079');")
-    check_count_data['__EFMigrationsHistory'] += 3
-
-
-    if opts.save_dump:
-        _save_dump(data_dump)
 
     if _mysql_IsConnect:
         if _mysql_tables_clean():
@@ -820,6 +1011,9 @@ def main():
         
         _save_error_log(mysql_list_error)
         _mysql_disconnect()
+    
+    if opts.save_dump:
+        _save_dump(data_dump)
 
 if __name__ == "__main__":
     print("Migration tool from SQLite to MySql/MariaDB for ombi ({0}) By {1}".format(__version__, __author__))
