@@ -112,15 +112,17 @@ def dump(obj):
 def progressbar(it, prefix="", size=60, file=sys.stdout):
     count = len(it)
 
-    def size_console():
-        rows, columns = os.popen('stty size', 'r').read().split()
-        return int(columns), int(rows)
+    #def size_console():
+    #    rows, columns = os.popen('stty size', 'r').read().split()
+    #    return int(columns), int(rows)
 
     def show(j):
-        if str(size).lower() == "auto".lower():
-            size_fix = int(size_console()[0]) - len(prefix) - (len(str(count))*2) - 4 - 5
-        else:
-            size_fix = size
+        # Not work in Windows!
+        #if str(size).lower() == "auto".lower():
+        #    size_fix = int(size_console()[0]) - len(prefix) - (len(str(count))*2) - 4 - 5
+        #else:
+        #    size_fix = size
+        size_fix = size
 
         x = int(size_fix*j/count)
         file.write("%s[%s%s] %i/%i\r" % (prefix, "#"*x, "."*(size_fix-x), j, count))
@@ -368,7 +370,7 @@ def _mysql_disconnect(show_msg=True):
         if show_msg:
             print("[✓]")
 
-def _mysql_execute_querys(list_insert, progressbar_text, progressbar_size="auto", run_commit=250, ignorer_error=[], DISABLE_FOREIGN_KEY_CHECKS=True, show_msg=True):
+def _mysql_execute_querys(list_insert, progressbar_text, progressbar_size, run_commit=250, ignorer_error=[], DISABLE_FOREIGN_KEY_CHECKS=True, show_msg=True):
     global mysql_conn
     global mysql_list_error
 
@@ -681,7 +683,7 @@ def _sqlite_dump():
             yield(line)
 
     #required insert
-    
+
     # Si no se aNaden da error al arrancar Ombi ya que intenta crear las tablas pero ya existen.
     #INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103213915_Inital', '2.2.6-servicing-10079');
     #INSERT INTO `__EFMigrationsHistory` (`MigrationId`, `ProductVersion`) VALUES ('20191103205915_Inital', '2.2.6-servicing-10079');
@@ -702,7 +704,7 @@ def _sqlite_dump():
 
         
         for _, req_val in val['required'].items():
-            if req_val['isExistMySQL'] == True:
+            if req_val['isExistMySQL']:
                 continue
 
             if len(req_val['data']) > 0:
