@@ -643,7 +643,7 @@ def _mysql_tables_clean():
 
 
 
-def _conver_str_sqlite_mysql(str_data):
+def _convert_str_sqlite_mysql(str_data):
     str_data = str_data.replace('\\', '\\\\')
     str_data = str_data.replace('"', '\\"')
 
@@ -775,7 +775,7 @@ def _iterdump(connection, db_name):
         query_res = cu.execute(q % {'tbl_name': table_name})
 
         for row in query_res:
-            q_insert = _conver_str_sqlite_mysql(row[0].encode('utf-8'))
+            q_insert = _convert_str_sqlite_mysql(row[0].encode('utf-8'))
 
             q_insert = _iterdump_fix_insert(q_insert, q_col, table_name)
             if not q_insert:

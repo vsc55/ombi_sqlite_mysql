@@ -104,7 +104,7 @@ Generate file database.json:
 MySQL > Disconnecting... [✓]
 $
 ```
-4. Start ombi and test if everything works fine.
+2. Start ombi and test if everything works fine.
 
 ## Help
 ```
