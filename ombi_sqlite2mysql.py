@@ -19,11 +19,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-__author__ = "Javier Pastor"
+__author__ = "VSC55"
 __copyright__ = "Copyright © 2019, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
-__version__ = "3.0.1"
+__version__ = "3.0.2"
 __maintainer__ = 'Javier Pastor'
 __email__ = "python@cerebelum.net"
 __status__ = "Development"
@@ -174,9 +174,16 @@ def _read_json(file_json, def_return=None, show_msg=True):
                 print("Exception read json ({0}):".format(file_json), e)
     return return_date
 
-def _save_json(file_json, data, show_msg=True):
+def _save_json(file_json, data, overwrite=False, show_msg=True):
     if show_msg:
-        sys.stdout.write("- Keeping in ({0})... ".format(file_json))
+        sys.stdout.write("- Saving in ({0})... ".format(file_json))
+
+    if not overwrite:
+        if os.path.isfile(file_json):
+            if show_msg:
+                print("[SKIP, ALREADY EXISTS!]")
+            return True
+
     try:
         f = codecs.open(file_json, 'w', 'utf-8')
         f.write(json.dumps(data))
@@ -836,7 +843,8 @@ def _iterdump_fix_insert(q, q_col, table_name):
 def _fix_insert_read_mysql():
     global fix_insert
 
-    for k, v in fix_insert.items():
+    isAllOk = True
+    for k, v in progressbar(fix_insert.items(), "- Reading   ", global_progressbar_size):
         ls_query = []
         q = "SHOW columns FROM `{0}`;".format(k)
         ls_query.append(q)
@@ -845,8 +853,10 @@ def _fix_insert_read_mysql():
         return_querys = _mysql_fetchall_querys(ls_query, [1146])
 
         if not return_querys[0]:
-            print("Error: Table \"{0}\" requiered is not exist in the server MySQL!").format(k)
-            return False
+            print("")
+            print("- Error: Table \"{0}\" requiered is not exist in the server MySQL!!!").format(k)
+            isAllOk = False
+            break
 
         ls_column = []
         for i in return_querys[0]:
@@ -868,11 +878,18 @@ def _fix_insert_read_mysql():
                 n_col += 1
             data.append(line)
 
+        v['mysql'] = {}
         v['mysql']['ls_column'] = ls_column
         v['mysql']['ls_data'] = ls_data
         v['mysql']['ls_id'] = ls_ids
         v['mysql']['data'] = data
-    return True
+
+    if isAllOk:
+        print ("Read tables [✓]")
+    else:
+        print ("Read tables [!!]")
+    print("")
+    return isAllOk
 
 
 def _save_dump(data, show_msg=True):
@@ -902,26 +919,24 @@ def _save_error_log(data, show_msg=True):
 
     return data_return
 
-def _mysql_database_json_update(show_msg=True):
+def _mysql_database_json_update(overwrite=False, show_msg=True):
+    json_mysql = _get_path_file_in_conf(json_file_database)
     json_data = {}
     for db_name in list_db:
         json_data[db_name] = {
             "Type": "MySQL",
             "ConnectionString": "Server={0};Port={1};Database={2};User={3};Password={4}".format(mysql_cfg['host'], mysql_cfg['port'], mysql_cfg['db'], mysql_cfg['user'], mysql_cfg['passwd'])
         }
-    json_mysql = _get_path_file_in_conf(json_file_database)
+    
     if show_msg:
-        print("Generate file {0}:".format(json_file_database))
-    _save_json(json_mysql, json_data, show_msg)
+        print("Generate file \"{0}\":".format(json_file_database))
+    
+    _save_json(json_mysql, json_data, overwrite, show_msg)
     if show_msg:
         print("")
 
 def _manager_json_update(overwrite=False, show_msg=True):
     json_file = _get_path_file_in_conf(json_file_migration)
-    if not overwrite:
-        if os.path.isfile(json_file):
-            return
-
     json_data = {}
     for db_name in list_db:
         db_file = _get_path_file_in_conf(list_db[db_name])
@@ -933,9 +948,9 @@ def _manager_json_update(overwrite=False, show_msg=True):
         }
 
     if show_msg:
-        print("Generate file {0}:".format(json_file))
+        print("Generate file \"{0}\":".format(json_file_migration))
 
-    _save_json(json_file, json_data, show_msg)
+    _save_json(json_file, json_data, overwrite, show_msg)
     if show_msg:
         print("")
 
@@ -973,12 +988,12 @@ def _OptionParser_apply():
     if opts.only_db_json or opts.only_manager_json:
         if opts.only_db_json:
             if mysql_cfg:
-                _mysql_database_json_update()
+                _mysql_database_json_update(True, True)
             else:
-                print ("Unable to create file {0} missing required parameters.".format(json_file_database))
+                print ("Unable to create file \"{0}\" missing required parameters.".format(json_file_database))
 
         if opts.only_manager_json:
-            _manager_json_update(True)
+            _manager_json_update(True, True)
         return False
 
     return True
@@ -991,7 +1006,8 @@ def main():
     if not _OptionParser():
         return
 
-    _manager_json_update()
+    _manager_json_update(None, False)
+    _mysql_database_json_update(True)
 
     if mysql_cfg:
         _mysql_connect()
@@ -1008,8 +1024,7 @@ def main():
 
     if _mysql_IsConnect:
         if _mysql_tables_clean():
-            if _mysql_migration(data_dump):
-                _mysql_database_json_update()
+            _mysql_migration(data_dump)
         
         _save_error_log(mysql_list_error)
         _mysql_disconnect()

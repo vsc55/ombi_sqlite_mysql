@@ -64,10 +64,13 @@ Content "migration.json":
 The script will empty the tables from the MySQL/MariaDB database and automatically migrate the data from SQLite to MySQL/MariaDB.
 ```
 $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host 192.168.1.100 --db Ombi --user ombi --passwd ombi
-Migration tool from SQLite to MySql/MariaDB for ombi (3.0.1) By Javier Pastor
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
 
-Generate file /etc/Ombi/migration.json:
+Generate file "migration.json":
 - Keeping in (/etc/Ombi/migration.json)... [✓]
+
+Generate file "database.json":
+- Keeping in (/etc/Ombi/database.json)... [✓]
 
 MySQL > Connecting... [✓]
 Check migration.json:
@@ -98,9 +101,6 @@ Start Migration:
 - Running   [############################################################] 117641/117641
 - Checking  [############################################################] 43/43
 
-Generate file database.json:
-- Keeping in (/etc/Ombi/database.json)... [✓]
-
 MySQL > Disconnecting... [✓]
 $
 ```
@@ -109,7 +109,7 @@ $
 ## Help
 ```
 $ python2 ombi_sqlite2mysql.py -h
-Migration tool from SQLite to MySql/MariaDB for ombi (3.0.1) By Javier Pastor
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
 
 Usage: ombi_sqlite2mysql.py [options]
 
