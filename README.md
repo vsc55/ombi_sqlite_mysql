@@ -27,7 +27,11 @@ $ pip install mysqlclient           # Python Pip
 2. Stop ombi
 3. Create or Modify **database.json** to use mysql.
 ```
-$ python2 ombi_sqlite2mysql.py -c /etc/Ombi --only_db_json --host 192.168.1.100 --db Ombi --user ombi --passwd ombi 
+$ python2 ombi_sqlite2mysql.py -c /etc/Ombi --only_db_json --host 192.168.1.100 --db Ombi --user ombi --passwd ombi
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
+
+Generate file "database.json":
+- Saving in (/etc/Ombi/database.json)... [✓]
 ```
 4. Start ombi and wait for it to create the tables.
 5. We access the ombi website to finish generating the missing tables. ExternalDatabase tables are not created until they are first accessed. 
@@ -44,6 +48,11 @@ $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --only_db_json --host 192.168.1.100 
 If we do not want to export OmbiExternal.
 ```
 $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --only_manager_json
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
+
+Generate file "migration.json":
+- Saving in (/etc/Ombi/migration.json)... [✓]
+
 $ vi /etc/Ombi/migration.json
 ```
 Content "migration.json":
@@ -67,10 +76,10 @@ $ python2 ombi_sqlite2mysql.py -c /etc/Ombi --host 192.168.1.100 --db Ombi --use
 Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
 
 Generate file "migration.json":
-- Keeping in (/etc/Ombi/migration.json)... [✓]
+- Saving in (/etc/Ombi/migration.json)... [✓]
 
 Generate file "database.json":
-- Keeping in (/etc/Ombi/database.json)... [✓]
+- Saving in (/etc/Ombi/database.json)... [✓]
 
 MySQL > Connecting... [✓]
 Check migration.json:
