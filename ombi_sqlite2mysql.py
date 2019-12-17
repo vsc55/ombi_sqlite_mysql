@@ -756,7 +756,7 @@ def _iterdump(connection, db_name):
 
         if table_name in ['sqlite_sequence', 'sqlite_stat1'] or table_name.startswith('sqlite_'):
             continue
-        elif cu.execute("SELECT COUNT(*) FROM {0}".format(table_name)).fetchone()[0] < 1:
+        elif cu.execute("SELECT COUNT(*) FROM '{0}'".format(table_name)).fetchone()[0] < 1:
             continue
 
         # TODO: Pendiente agrupar insert para una exportacion mas rapida.
