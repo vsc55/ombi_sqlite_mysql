@@ -101,6 +101,9 @@ fix_insert = {
     }
 }
 
+# obsolete tables
+sqlite_table_ignore = ['Logs', 'HangFire.AggregatedCounter', 'HangFire.Counter', 'HangFire.Hash', 'HangFire.Job', 'HangFire.JobParameter', 'HangFire.JobQueue', 'HangFire.List', 'HangFire.Schema', 'HangFire.Server', 'HangFire.Set', 'HangFire.State']
+
 
 
 def dump(obj):
@@ -755,6 +758,8 @@ def _iterdump(connection, db_name):
             check_count_data[table_name] = 0
 
         if table_name in ['sqlite_sequence', 'sqlite_stat1'] or table_name.startswith('sqlite_'):
+            continue
+        elif table_name in sqlite_table_ignore:
             continue
         elif cu.execute("SELECT COUNT(*) FROM '{0}'".format(table_name)).fetchone()[0] < 1:
             continue
