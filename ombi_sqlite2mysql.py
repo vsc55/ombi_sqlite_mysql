@@ -23,7 +23,7 @@ __author__ = "VSC55"
 __copyright__ = "Copyright © 2019, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
-__version__ = "3.0.2"
+__version__ = "3.0.3"
 __maintainer__ = 'Javier Pastor'
 __email__ = "python@cerebelum.net"
 __status__ = "Development"
@@ -36,7 +36,6 @@ import codecs
 import json
 import sqlite3
 import copy
-import MySQLdb
 from optparse import OptionParser
 
 opts = None
@@ -1002,10 +1001,21 @@ def _OptionParser_apply():
         return False
 
     return True
-    
-
 
 def main():
+    try:
+        import MySQLdb
+    except ImportError as error:
+        # Output expected ImportErrors.
+        print(error.__class__.__name__ + ": " + error.message)
+        os._exit(0)
+
+    except Exception as exception:
+        # Output unexpected Exceptions.
+        print(exception, False)
+        print(exception.__class__.__name__ + ": " + exception.message)
+        os._exit(0)
+
     global check_count_data
     
     if not _OptionParser():
@@ -1040,4 +1050,10 @@ def main():
 if __name__ == "__main__":
     print("Migration tool from SQLite to MySql/MariaDB for ombi ({0}) By {1}".format(__version__, __author__))
     print("")
+
+    if (sys.version_info > (3, 0)):
+        print("Error: Script compatible only with Python2.")
+        print("")
+        os._exit(0)
+
     main()
