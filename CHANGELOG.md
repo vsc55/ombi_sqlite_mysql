@@ -1,5 +1,5 @@
 # Version 3.0.3
-- Detect if the python version used is correct.
+- Add support Python 3.
 - Control error in importing modules.
 
 # Version 3.0.2

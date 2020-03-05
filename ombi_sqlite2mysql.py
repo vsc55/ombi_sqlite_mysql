@@ -20,7 +20,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __author__ = "VSC55"
-__copyright__ = "Copyright © 2019, Javier Pastor"
+__copyright__ = "Copyright © 2020, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
 __version__ = "3.0.3"
@@ -30,6 +30,7 @@ __status__ = "Development"
 
 import sys
 import os
+import importlib
 import time
 import datetime
 import codecs
@@ -39,6 +40,8 @@ import copy
 from optparse import OptionParser
 
 opts = None
+MySQLdb = None
+python_version = None
 
 global_progressbar_size = 60
 
@@ -653,6 +656,10 @@ def _mysql_tables_clean():
 
 
 def _convert_str_sqlite_mysql(str_data):
+    if python_version == 3:
+        if isinstance(str_data, bytes):
+            str_data = str_data.decode()
+
     str_data = str_data.replace('\\', '\\\\')
     str_data = str_data.replace('"', '\\"')
 
@@ -1002,20 +1009,9 @@ def _OptionParser_apply():
 
     return True
 
+
+
 def main():
-    try:
-        import MySQLdb
-    except ImportError as error:
-        # Output expected ImportErrors.
-        print(error.__class__.__name__ + ": " + error.message)
-        os._exit(0)
-
-    except Exception as exception:
-        # Output unexpected Exceptions.
-        print(exception, False)
-        print(exception.__class__.__name__ + ": " + exception.message)
-        os._exit(0)
-
     global check_count_data
     
     if not _OptionParser():
@@ -1052,8 +1048,22 @@ if __name__ == "__main__":
     print("")
 
     if (sys.version_info > (3, 0)):
-        print("Error: Script compatible only with Python2.")
-        print("")
+        python_version = 3
+    else:
+        python_version = 2
+
+    try:
+        MySQLdb = importlib.import_module('MySQLdb')
+    except ImportError as error:
+        # Output expected ImportErrors.
+        print("Error load MySQLdb, check if MySQLdb is installed!")
+        #print(error.__class__.__name__ + ": " + error.message)
+        os._exit(0)
+
+    except Exception as exception:
+        # Output unexpected Exceptions.
+        print(exception, False)
+        print(exception.__class__.__name__ + ": " + exception.message)
         os._exit(0)
 
     main()
