@@ -1,3 +1,7 @@
+# Version 3.0.3
+- Add support Python 3.
+- Control error in importing modules.
+
 # Version 3.0.2
 - Add option overwrite in _save_json, _mysql_database_json_update.
 - Add progressbar in _fix_insert_read_mysql.
