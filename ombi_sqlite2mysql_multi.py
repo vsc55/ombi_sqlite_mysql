@@ -1,0 +1,279 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Migration tool from SQLite to Multi MySql/MariaDB for ombi
+#
+# Copyright © 2020  Javier Pastor (aka VSC55)
+# <jpastor at cerebelum dot net>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+__author__ = "VSC55"
+__copyright__ = "Copyright © 2020, Javier Pastor"
+__credits__ = "Javier Pastor"
+__license__ = "GPL"
+__version__ = "1.0.0"
+__maintainer__ = 'Javier Pastor'
+__email__ = "python@cerebelum.net"
+__status__ = "Development"
+
+import sys
+import os
+import importlib
+import time
+import datetime
+import json
+import shutil
+#import ombi_sqlite2mysql
+from optparse import OptionParser
+from ombi_sqlite2mysql import _read_json
+from ombi_sqlite2mysql import _save_json
+
+opts = None
+
+python_version = None
+json_file_database_multi = "database_multi.json"
+json_file_migration = "migration.json"
+json_file_database = "database.json"
+
+list_db = {'OmbiDatabase':'Ombi.db', 'SettingsDatabase':'OmbiSettings.db', 'ExternalDatabase':'OmbiExternal.db'}
+
+opt_config = None
+opt_no_backup = False
+opt_force = False
+
+
+
+class Switch:
+
+    """ Main Class. """
+
+    def __init__(self, value, invariant_culture_ignore_case=False, check_isinstance=False, check_contain=False):
+        """ The switch is initialized and configured as it will act.
+
+        :param value: Value against which comparisons will be made.
+        :param invariant_culture_ignore_case: If it is set to True and the type of value to be compared is a String,
+        the difference between uppercase and lowercase will be ignored when doing the verification.
+        :param check_isinstance: If set to True, the check will not be content value but the type of object it is.
+        :param check_contain: If it is true, it will check if the value that is specified is part of the text that
+        we check.
+
+        """
+        self.value = value
+        self.invariant_culture_ignore_case = invariant_culture_ignore_case
+        self.check_isinstance = check_isinstance
+        self.check_contain = check_contain
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        # Allows a traceback to occur
+        return False
+
+    def __call__(self, *values):
+        """ Check if any of the values passed to you match the value that was defined when the object was created.
+
+        :param values: List of values that are compared to the value specified when creating the switch.
+        :return: True if any of the values that have been passed match, False if none matches.
+
+        """
+        if self.check_isinstance:
+            # Efectúa check isinstance
+            for item in values:
+                if isinstance(self.value, item):
+                    return True
+            return False
+
+        elif isinstance(self.value, str):
+            for item in values:
+                if isinstance(item, str):
+                    if self.invariant_culture_ignore_case:
+                        # Comparativa ignorando Mayúsculas y Minúsculas.
+                        tmp_item = item.lower()
+                        tmp_value = self.value.lower()
+                    else:
+                        tmp_item = item
+                        tmp_value = self.value
+
+                    if self.check_contain:
+                        # Comprueba si el item esta dentro del valor.
+                        if tmp_item in tmp_value:
+                            return True
+                    else:
+                        # Comprueba si el item es igual valor.
+                        if tmp_item == tmp_value:
+                            return True
+
+        return self.value in values
+
+
+
+def _get_path_file_in_conf(file_name):
+    if opts is not None and opts.config and file_name:
+        return os.path.join(opts.config, file_name)
+    else:
+        return ""
+
+
+def _OptionParser():
+    global opts
+    op = OptionParser()
+    op.add_option('-c', '--config', default="/etc/Ombi", help="Path folder config ombi, default /etc/Ombi.")
+    op.add_option('', '--no_backup', action="store_true",  default=False, help="Disable the backup of the \"__EFMigrationsHistory\" table.")
+    op.add_option('', '--force', action="store_true",  default=False, help="Force clear all tables.")
+    opts, _ = op.parse_args()
+    return _OptionParser_apply()
+
+def _OptionParser_apply():
+    global opt_config
+    global opt_no_backup
+    global opt_force
+
+    opt_config      = opts.config
+    opt_no_backup   = opts.no_backup
+    opt_force       = opts.force
+
+    return True
+
+def main():
+    
+    if not _OptionParser():
+        return
+
+    json_db         = _get_path_file_in_conf(json_file_database)
+    json_db_multi   = _get_path_file_in_conf(json_file_database_multi)
+    json_migration  = _get_path_file_in_conf(json_file_migration)    
+
+    if not os.path.isfile(json_db_multi):
+        print("Error: File {0} not exist!!!".format(json_db_multi))
+        return False
+        
+    json_db_multi_data = _read_json(json_db_multi)
+    if json_db_multi_data is None:
+        print ("Error: No data has been read from the json ({0}) file, please review it.!!!!".format(json_db_multi))
+        return False
+    
+
+    for key, value in json_db_multi_data.items():
+        
+        if not key in list_db:
+            print("- DataBase ({0}) Skip: Name DataBase is not valid!".format(key))
+            print("")
+            continue
+
+        opt_type    = None
+        opt_connect = None
+        opt_skip    = False
+        opt_file    = _get_path_file_in_conf(list_db[key])
+
+        mysql_host  = "localhost"
+        mysql_port  = "3306"
+        mysql_db    = "Ombi"
+        mysql_user  = "ombi"
+        mysql_pass  = "ombi"
+
+        for subkey, subval in value.items():
+            with Switch(subkey, invariant_culture_ignore_case=True) as case:
+                if case("Type"):
+                    if subval:
+                        opt_type = subval.lower()
+
+                elif case("ConnectionString"):
+                    if subval:
+                        opt_connect = subval.lower()
+
+                elif case("Skip"):
+                    if subval:
+                        opt_skip = bool(subval.lower())
+        
+
+        if opt_type != "MySQL".lower():
+            print("- DataBase ({0}) Skip: Type ({1}) not valid, only support MySQL!".format(key, opt_type))
+            print("")
+            continue
+       
+        if opt_skip:
+            print("- DataBase ({0}) Skip: User defined Skip!".format(key))
+            print("")
+            continue
+
+        if opt_connect is None:
+            print("- DataBase ({0}) Skip: ConnectionString is null!".format(key))
+            print("")
+            continue
+        else:
+            opt_connect_data = opt_connect.split(";")
+            for val in opt_connect_data:
+                item_data = val.split("=", 1)
+                item_key = item_data[0]
+                item_val = item_data[1]
+
+                with Switch(item_key, invariant_culture_ignore_case=True) as case:
+                    if case("Server"):
+                        if item_val:
+                            mysql_host = item_val
+
+                    elif case("Port"):
+                        if item_val:
+                            mysql_port = item_val
+
+                    elif case("Database"):
+                        if item_val:
+                            mysql_db = item_val
+
+                    elif case("User"):
+                        if item_val:
+                            mysql_user = item_val
+
+                    elif case("Password"):
+                        if item_val:
+                            mysql_pass = item_val
+
+        print("- Processing DataBase ({0})...".format(key))
+        json_migration_data = {
+            key: {  
+                "ConnectionString": "Data Source={0}".format(opt_file),
+                "Type": "sqlite"
+            } 
+        }
+        _save_json(json_migration, json_migration_data, True, True)
+        os.system('python{0} ombi_sqlite2mysql.py -c {1} --host {2} --port {3} --db {4} --user {5} --passwd {6} {7} {8}'.format(
+                python_version,
+                opt_config,
+                mysql_host,
+                mysql_port,
+                mysql_db,
+                mysql_user,
+                mysql_pass,
+                "--no_backup" if opt_no_backup else "",
+                "--force" if opt_force else ""
+            )
+        )
+        print("")
+
+    _save_json(json_db, json_db_multi_data, True, True)
+    print("")
+    print("")
+
+if __name__ == "__main__":
+    print("Migration tool from SQLite to Multi MySql/MariaDB for ombi ({0}) By {1}".format(__version__, __author__))
+    print("")
+
+    if (sys.version_info > (3, 0)):
+        python_version = 3
+    else:
+        python_version = 2
+
+    main()
