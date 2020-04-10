@@ -40,7 +40,6 @@ from distutils.version import StrictVersion
 
 
 python_version = None
-python_executable_path = None
 ombi_sqlite2mysql_version = "3.0.4"
 json_file_database_multi = "database_multi.json"
 json_file_migration = "migration.json"
@@ -291,8 +290,6 @@ if __name__ == "__main__":
     else:
         python_version = 2
         ombi_sqlite2mysql.python_version = 2
-    
-    python_executable_path = os.environ['_']
     
     if ( StrictVersion(ombi_sqlite2mysql.__version__) > StrictVersion(ombi_sqlite2mysql_version)):
         print("Error: Version ombi_sqlite2mysql is not valid, need {0} or high!!".format(ombi_sqlite2mysql_version))
