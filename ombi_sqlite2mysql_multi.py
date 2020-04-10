@@ -51,7 +51,8 @@ opts = None
 opt = {
     'config': None,
     'no_backup': False,
-    'force': False
+    'force': False,
+    'save_dump': False
 }
 
 
@@ -133,6 +134,7 @@ def _OptionParser():
     op.add_option('-c', '--config', default="/etc/Ombi", help="Path folder config ombi, default /etc/Ombi.")
     op.add_option('', '--no_backup', action="store_true",  default=False, help="Disable the backup of the \"__EFMigrationsHistory\" table.")
     op.add_option('', '--force', action="store_true",  default=False, help="Force clear all tables.")
+    op.add_option('', '--save_dump', action="store_true",  default=False, help="Save all query insert in the file.")
     opts, _ = op.parse_args()
     return _OptionParser_apply()
 
@@ -141,10 +143,12 @@ def _OptionParser_apply():
     opt['config']       = opts.config
     opt['force']        = opts.force
     opt['no_backup']    = opts.no_backup
+    opt['save_dump']    = opts.save_dump
     
     ombi_sqlite2mysql._set_conf('config', opt['config'])
     ombi_sqlite2mysql._set_conf('force', opt['force'])
     ombi_sqlite2mysql._set_conf('no_backup', opt['no_backup'])
+    ombi_sqlite2mysql._set_conf('save_dump', opt['save_dump'])
     
     if opt['force']:
         ombi_sqlite2mysql._clean_list_tables_skip_clean()

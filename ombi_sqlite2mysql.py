@@ -785,6 +785,10 @@ def _sqlite_dump():
                     q_val += "'{0}'".format(data_val)
 
                 q = 'INSERT INTO `{0}` ({1}) VALUES({2});'.format(key, q_col, q_val)
+                #print("------------------------")
+                #print(q)
+                #print("------------------------")
+
                 yield q
                 check_count_data[key] += 1
     print("")
@@ -1039,15 +1043,15 @@ def _OptionParser_apply():
 
     _check_config_mysql()
     if opts.no_backup:
-        _get_conf('no_backup', True)
+        _set_conf('no_backup', True)
         _clean_list_tables_backup()
 
     if opts.force:
-        _get_conf('force', True)
+        _set_conf('force', True)
         _clean_list_tables_skip_clean()
         
     if opts.save_dump:
-        _get_conf('save_dump', True)
+        _set_conf('save_dump', True)
 
     if opts.only_db_json or opts.only_manager_json:
         if opts.only_db_json:
