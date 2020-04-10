@@ -81,7 +81,7 @@ fix_insert = {
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
                 "isExistMySQL": False,
-                "DataBase": "OmbiExternal",
+                "DataBase": "ExternalDatabase",
             },
             "20191103205915_Inital": {
                 "data": {
@@ -91,7 +91,7 @@ fix_insert = {
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
                 "isExistMySQL": False,
-                "DataBase": "OmbiSettings",
+                "DataBase": "SettingsDatabase",
             },
             "20191102235852_Inital": {
                 "data": {
@@ -101,7 +101,7 @@ fix_insert = {
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
                 "isExistMySQL": False,
-                "DataBase": "Ombi",
+                "DataBase": "OmbiDatabase",
             }
         },
         "mysql": {
