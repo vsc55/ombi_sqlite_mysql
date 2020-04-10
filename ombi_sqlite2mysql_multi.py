@@ -34,25 +34,26 @@ import importlib
 import time
 import datetime
 import json
-import shutil
-#import ombi_sqlite2mysql
+import ombi_sqlite2mysql
 from optparse import OptionParser
-from ombi_sqlite2mysql import _read_json
-from ombi_sqlite2mysql import _save_json
+from distutils.version import StrictVersion
 
-opts = None
 
 python_version = None
+python_executable_path = None
+ombi_sqlite2mysql_version = "3.0.4"
 json_file_database_multi = "database_multi.json"
 json_file_migration = "migration.json"
 json_file_database = "database.json"
 
 list_db = {'OmbiDatabase':'Ombi.db', 'SettingsDatabase':'OmbiSettings.db', 'ExternalDatabase':'OmbiExternal.db'}
 
-opt_config = None
-opt_no_backup = False
-opt_force = False
-
+opts = None
+opt = {
+    'config': None,
+    'no_backup': False,
+    'force': False
+}
 
 
 class Switch:
@@ -121,8 +122,8 @@ class Switch:
 
 
 def _get_path_file_in_conf(file_name):
-    if opts is not None and opts.config and file_name:
-        return os.path.join(opts.config, file_name)
+    if opt['config'] and file_name:
+        return os.path.join(opt['config'], file_name)
     else:
         return ""
 
@@ -137,21 +138,24 @@ def _OptionParser():
     return _OptionParser_apply()
 
 def _OptionParser_apply():
-    global opt_config
-    global opt_no_backup
-    global opt_force
+    global opt
+    opt['config']       = opts.config
+    opt['force']        = opts.force
+    opt['no_backup']    = opts.no_backup
+    
+    ombi_sqlite2mysql._set_conf('config', opt['config'])
+    ombi_sqlite2mysql._set_conf('force', opt['force'])
+    ombi_sqlite2mysql._set_conf('no_backup', opt['no_backup'])
+    
+    if opt['force']:
+        ombi_sqlite2mysql._clean_list_tables_skip_clean()
 
-    opt_config      = opts.config
-    opt_no_backup   = opts.no_backup
-    opt_force       = opts.force
+    if opt['no_backup']:
+        ombi_sqlite2mysql._clean_list_tables_backup()
 
     return True
 
 def main():
-    
-    if not _OptionParser():
-        return
-
     json_db         = _get_path_file_in_conf(json_file_database)
     json_db_multi   = _get_path_file_in_conf(json_file_database_multi)
     json_migration  = _get_path_file_in_conf(json_file_migration)    
@@ -160,7 +164,7 @@ def main():
         print("Error: File {0} not exist!!!".format(json_db_multi))
         return False
         
-    json_db_multi_data = _read_json(json_db_multi)
+    json_db_multi_data = ombi_sqlite2mysql._read_json(json_db_multi)
     if json_db_multi_data is None:
         print ("Error: No data has been read from the json ({0}) file, please review it.!!!!".format(json_db_multi))
         return False
@@ -188,15 +192,15 @@ def main():
             with Switch(subkey, invariant_culture_ignore_case=True) as case:
                 if case("Type"):
                     if subval:
-                        opt_type = subval.lower()
+                        opt_type = str(subval).lower()
 
                 elif case("ConnectionString"):
                     if subval:
-                        opt_connect = subval.lower()
+                        opt_connect = str(subval)
 
                 elif case("Skip"):
                     if subval:
-                        opt_skip = bool(subval.lower())
+                        opt_skip = bool(subval)
         
 
         if opt_type != "MySQL".lower():
@@ -223,47 +227,72 @@ def main():
                 with Switch(item_key, invariant_culture_ignore_case=True) as case:
                     if case("Server"):
                         if item_val:
-                            mysql_host = item_val
+                            mysql_host = str(item_val)
 
                     elif case("Port"):
                         if item_val:
-                            mysql_port = item_val
+                            mysql_port = int(item_val)
 
                     elif case("Database"):
                         if item_val:
-                            mysql_db = item_val
+                            mysql_db = str(item_val)
 
                     elif case("User"):
                         if item_val:
-                            mysql_user = item_val
+                            mysql_user = str(item_val)
 
                     elif case("Password"):
                         if item_val:
-                            mysql_pass = item_val
+                            mysql_pass = str(item_val)
 
         print("- Processing DataBase ({0})...".format(key))
+        print("  -------------------")
+        print("")
         json_migration_data = {
             key: {  
                 "ConnectionString": "Data Source={0}".format(opt_file),
                 "Type": "sqlite"
             } 
         }
-        _save_json(json_migration, json_migration_data, True, True)
-        os.system('python{0} ombi_sqlite2mysql.py -c {1} --host {2} --port {3} --db {4} --user {5} --passwd {6} {7} {8}'.format(
-                python_version,
-                opt_config,
+        
+        new_cfg = {
+            'host': mysql_host,
+            'port': mysql_port,
+            'db': mysql_db,
+            'user': mysql_user,
+            'passwd': mysql_pass,
+            'connect_timeout': 2,
+            'use_unicode': True,
+            'charset': 'utf8'
+        }
+        ombi_sqlite2mysql._set_mysql_cfg(new_cfg)
+
+        ombi_sqlite2mysql._save_json(json_migration, json_migration_data, True, True)
+
+        # TODO: Pendiente mirar por que no inserta en la segunda pasada del FOR
+        #ombi_sqlite2mysql.main()
+
+        os.system('{0} ombi_sqlite2mysql.py -c {1} --host {2} --port {3} --db {4} --user {5} --passwd {6} {7} {8}'.format(
+                python_executable_path,
+                opt['config'],
                 mysql_host,
                 mysql_port,
                 mysql_db,
                 mysql_user,
                 mysql_pass,
-                "--no_backup" if opt_no_backup else "",
-                "--force" if opt_force else ""
+                "--no_backup" if opt['no_backup'] else "",
+                "--force" if opt['force'] else ""
             )
         )
-        print("")
 
-    _save_json(json_db, json_db_multi_data, True, True)
+        print("")
+        print("----------------------------------------------------------------")
+        print("")
+        time.sleep(2)
+        
+
+    print("> Updating database.json...")
+    ombi_sqlite2mysql._save_json(json_db, json_db_multi_data, True, True)
     print("")
     print("")
 
@@ -273,7 +302,22 @@ if __name__ == "__main__":
 
     if (sys.version_info > (3, 0)):
         python_version = 3
+        ombi_sqlite2mysql.python_version = 3
     else:
         python_version = 2
+        ombi_sqlite2mysql.python_version = 2
+    
+    python_executable_path = os.environ['_']
+    
+    if ( StrictVersion(ombi_sqlite2mysql.__version__) > StrictVersion(ombi_sqlite2mysql_version)):
+        print("Error: Version ombi_sqlite2mysql is not valid, need {0} or high!!".format(ombi_sqlite2mysql_version))
+        print("")
+        os._exit(0)
+
+    if not ombi_sqlite2mysql.load_MySQL_lib():
+        os._exit(0)
+
+    if not _OptionParser():
+        os._exit(0)
 
     main()
