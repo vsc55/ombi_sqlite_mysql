@@ -338,6 +338,12 @@ def _clean_list_error():
     global mysql_list_error
     mysql_list_error = []
 
+def _clean_check_count_data():
+    global check_count_data
+    check_count_data = {}
+
+
+
 def _check_config_mysql():
     # TODO: pendiente leer config de database.json
     new_cfg = None
@@ -1071,7 +1077,7 @@ def load_MySQL_lib():
 
 def main():
     global check_count_data
-
+    
     _manager_json_update(None, False)
     _mysql_database_json_update(True)
 
@@ -1091,6 +1097,7 @@ def main():
     if _mysql_IsConnect:
         if _mysql_tables_clean():
             _mysql_migration(data_dump)
+            _clean_check_count_data()
         
         _save_error_log(mysql_list_error)
         _clean_list_error()

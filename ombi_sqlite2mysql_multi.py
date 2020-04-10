@@ -269,26 +269,11 @@ def main():
 
         ombi_sqlite2mysql._save_json(json_migration, json_migration_data, True, True)
 
-        # TODO: Pendiente mirar por que no inserta en la segunda pasada del FOR
-        #ombi_sqlite2mysql.main()
-
-        os.system('{0} ombi_sqlite2mysql.py -c {1} --host {2} --port {3} --db {4} --user {5} --passwd {6} {7} {8}'.format(
-                python_executable_path,
-                opt['config'],
-                mysql_host,
-                mysql_port,
-                mysql_db,
-                mysql_user,
-                mysql_pass,
-                "--no_backup" if opt['no_backup'] else "",
-                "--force" if opt['force'] else ""
-            )
-        )
-
+        ombi_sqlite2mysql.main()
         print("")
         print("----------------------------------------------------------------")
+        print("----------------------------------------------------------------")
         print("")
-        time.sleep(2)
         
 
     print("> Updating database.json...")
