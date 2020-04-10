@@ -80,7 +80,8 @@ fix_insert = {
                 },
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
-                "isExistMySQL": False
+                "isExistMySQL": False,
+                "DataBase": "OmbiExternal",
             },
             "20191103205915_Inital": {
                 "data": {
@@ -89,7 +90,8 @@ fix_insert = {
                 },
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
-                "isExistMySQL": False
+                "isExistMySQL": False,
+                "DataBase": "OmbiSettings",
             },
             "20191102235852_Inital": {
                 "data": {
@@ -99,6 +101,7 @@ fix_insert = {
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
                 "isExistMySQL": False,
+                "DataBase": "Ombi",
             }
         },
         "mysql": {
@@ -765,6 +768,9 @@ def _sqlite_dump():
             if req_val['isExistMySQL']:
                 continue
 
+            if str(db_name).lower() != str(req_val['DataBase']).lower() :
+                continue
+
             if len(req_val['data']) > 0:
                 q_col = ""
                 q_val = ""
@@ -1077,7 +1083,7 @@ def load_MySQL_lib():
 
 def main():
     global check_count_data
-    
+
     _manager_json_update(None, False)
     _mysql_database_json_update(True)
 
