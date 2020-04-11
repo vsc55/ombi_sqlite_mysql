@@ -176,6 +176,7 @@ MySQL > Disconnecting... [✓]
     ```
 
     > We can omit the export of a database by removing it from **"database_multi.json"** or adding the property **"Skip"**.
+    > The example next will export the databases **"OmbiDatabase"** and **"SettingsDatabase"** but omit **"ExternalDatabase"**.
     ```
     $ vi database_multi.json
     {
@@ -194,9 +195,9 @@ MySQL > Disconnecting... [✓]
         }
     }
     ```
-    > The example above will export the databases **"OmbiDatabase"** and **"SettingsDatabase"** but omit **"ExternalDatabase"**.
 
-    > We can also send the same database to different servers with the following configuration:
+    > We can also send the same database to different servers with the following configuration.
+    > The example next sends databases "OmbiDatabase", "SettingsDatabase" and "ExternalDatabase" to servers 192.168.1.100 and 192.168.1.200.
     ```
     $ vi database_multi.json
     {
@@ -226,9 +227,7 @@ MySQL > Disconnecting... [✓]
         }
     }
     ```
-    > The example above sends databases "OmbiDatabase", "SettingsDatabase" and "ExternalDatabase" to servers 192.168.1.100 and 192.168.1.200.
-
-    > ## NOTE: If you want to export all the content to several servers we will have to repeat the point "Create and prepare tables" with the different servers so that all the tables are created.
+    > ### NOTE: If you want to export all the content to several servers we will have to repeat the point "Create and prepare tables" with the different servers so that all the tables are created.
 
 2. Start data migration.
     > The script will empty the tables from the MySQL/MariaDB database and automatically migrate the data from SQLite to MySQL/MariaDB.
