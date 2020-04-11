@@ -176,7 +176,7 @@ def _save_file(file_name, data, show_msg=True):
         sys.stdout.write("- Keeping in ({0})... ".format(file_name))
 
     try:
-        with open(file_name, 'w') as f:
+        with open(file_name, 'w', encoding="utf-8") as f:
             for line in data:
                 f.write('%s\n' % line)
         
