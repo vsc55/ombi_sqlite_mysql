@@ -3,7 +3,7 @@
 #
 # Migration tool from SQLite to MySql/MariaDB for ombi
 #
-# Copyright © 2019  Javier Pastor (aka VSC55)
+# Copyright © 2020  Javier Pastor (aka VSC55)
 # <jpastor at cerebelum dot net>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,7 @@ __author__ = "VSC55"
 __copyright__ = "Copyright © 2020, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
-__version__ = "3.0.3"
+__version__ = "3.0.4"
 __maintainer__ = 'Javier Pastor'
 __email__ = "python@cerebelum.net"
 __status__ = "Development"
@@ -52,6 +52,13 @@ json_db_data = None
 list_db = {'OmbiDatabase':'Ombi.db', 'SettingsDatabase':'OmbiSettings.db', 'ExternalDatabase':'OmbiExternal.db'}
 list_db_process = None
 
+global_opts = { 
+    'config': None,
+    'no_backup': False,
+    'force': False,
+    'save_dump': False
+}
+
 check_count_data = {}
 
 mysql_db_file = "data_ombi.mysql"
@@ -73,7 +80,8 @@ fix_insert = {
                 },
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
-                "isExistMySQL": False
+                "isExistMySQL": False,
+                "DataBase": "ExternalDatabase",
             },
             "20191103205915_Inital": {
                 "data": {
@@ -82,7 +90,8 @@ fix_insert = {
                 },
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
-                "isExistMySQL": False
+                "isExistMySQL": False,
+                "DataBase": "SettingsDatabase",
             },
             "20191102235852_Inital": {
                 "data": {
@@ -92,6 +101,7 @@ fix_insert = {
                 "AcctionIsExistSQLite": "del",
                 "isExistSQLite": False,
                 "isExistMySQL": False,
+                "DataBase": "OmbiDatabase",
             }
         },
         "mysql": {
@@ -141,12 +151,32 @@ def progressbar(it, prefix="", size=60, file=sys.stdout):
 
 
 
+def _set_conf(key, value):
+    global global_opts
+    global_opts[key] = value
+    return True
+
+def _get_conf(key, default = ""):
+    if key in global_opts:
+        return global_opts[key]
+    else:
+        return default
+
+def _set_mysql_cfg(new_cfg):
+    global mysql_cfg
+    mysql_cfg = None
+    mysql_cfg = new_cfg
+
+def _get_mysql_cfg():
+    return mysql_cfg
+
+
 def _save_file(file_name, data, show_msg=True):
     if show_msg:
         sys.stdout.write("- Keeping in ({0})... ".format(file_name))
 
     try:
-        with open(file_name, 'w') as f:
+        with open(file_name, 'w', encoding="utf-8") as f:
             for line in data:
                 f.write('%s\n' % line)
         
@@ -204,8 +234,8 @@ def _save_json(file_json, data, overwrite=False, show_msg=True):
 
 
 def _get_path_file_in_conf(file_name):
-    if opts is not None and opts.config and file_name:
-        return os.path.join(opts.config, file_name)
+    if _get_conf('config') and file_name:
+        return os.path.join(_get_conf('config'), file_name)
     else:
         return ""
 
@@ -255,15 +285,11 @@ def _check_read_config():
 
     print("Check {0}:".format(json_file_migration))
 
-    if opts is None:
-        print("Error: Args is Null!!")
-        return False
-
-    elif not opts.config:
+    if not _get_conf('config'):
         print("Error: Not select config path!!")
         return False
 
-    elif not os.path.isdir(opts.config):
+    elif not os.path.isdir(_get_conf('config')):
         print ("Error: The config path does not exist or is not a directory !!")
         return False
     
@@ -303,12 +329,29 @@ def _check_read_config():
 
 
 
+def _clean_list_tables_backup():
+    global mysql_list_tables_save_backup
+    mysql_list_tables_save_backup = []
+
+def _clean_list_tables_skip_clean():
+    global mysql_list_tables_skip_clean
+    mysql_list_tables_skip_clean = []
+
+def _clean_list_error():
+    global mysql_list_error
+    mysql_list_error = []
+
+def _clean_check_count_data():
+    global check_count_data
+    check_count_data = {}
+
+
+
 def _check_config_mysql():
     # TODO: pendiente leer config de database.json
-    global mysql_cfg
-    mysql_cfg = None
+    new_cfg = None
     if opts.host:
-        mysql_cfg = {
+        new_cfg = {
             'host': opts.host,
             'port': opts.port,
             'db': opts.db,
@@ -318,6 +361,8 @@ def _check_config_mysql():
             'use_unicode': True,
             'charset': 'utf8'
         }
+
+    _set_mysql_cfg(new_cfg)
 
 def _mysql_IsConnect():
     if mysql_conn is None:
@@ -723,6 +768,9 @@ def _sqlite_dump():
             if req_val['isExistMySQL']:
                 continue
 
+            if str(db_name).lower() != str(req_val['DataBase']).lower() :
+                continue
+
             if len(req_val['data']) > 0:
                 q_col = ""
                 q_val = ""
@@ -737,6 +785,10 @@ def _sqlite_dump():
                     q_val += "'{0}'".format(data_val)
 
                 q = 'INSERT INTO `{0}` ({1}) VALUES({2});'.format(key, q_col, q_val)
+                #print("------------------------")
+                #print(q)
+                #print("------------------------")
+
                 yield q
                 check_count_data[key] += 1
     print("")
@@ -986,15 +1038,20 @@ def _OptionParser():
     return _OptionParser_apply()
 
 def _OptionParser_apply():
-    global mysql_list_tables_save_backup
-    global mysql_list_tables_skip_clean
+    if opts.config:
+        _set_conf('config', opts.config)
 
     _check_config_mysql()
     if opts.no_backup:
-        mysql_list_tables_save_backup = []
+        _set_conf('no_backup', True)
+        _clean_list_tables_backup()
 
     if opts.force:
-        mysql_list_tables_skip_clean = []
+        _set_conf('force', True)
+        _clean_list_tables_skip_clean()
+        
+    if opts.save_dump:
+        _set_conf('save_dump', True)
 
     if opts.only_db_json or opts.only_manager_json:
         if opts.only_db_json:
@@ -1009,20 +1066,34 @@ def _OptionParser_apply():
 
     return True
 
+def load_MySQL_lib():
+    global MySQLdb
 
+    try:
+        MySQLdb = importlib.import_module('MySQLdb')
+    except ImportError as error:
+        # Output expected ImportErrors.
+        print("Error load MySQLdb, check if MySQLdb is installed!")
+        #print(error.__class__.__name__ + ": " + error.message)
+        return False
+
+    except Exception as exception:
+        # Output unexpected Exceptions.
+        print(exception, False)
+        print(exception.__class__.__name__ + ": " + exception.message)
+        return False
+    
+    return True
 
 def main():
     global check_count_data
-    
-    if not _OptionParser():
-        return
 
     _manager_json_update(None, False)
     _mysql_database_json_update(True)
 
     if mysql_cfg:
         _mysql_connect()
-        if not opts.force:
+        if not _get_conf('force'):
             if not _fix_insert_read_mysql():
                 _mysql_disconnect()
                 return
@@ -1036,11 +1107,13 @@ def main():
     if _mysql_IsConnect:
         if _mysql_tables_clean():
             _mysql_migration(data_dump)
+            _clean_check_count_data()
         
         _save_error_log(mysql_list_error)
+        _clean_list_error()
         _mysql_disconnect()
     
-    if opts.save_dump:
+    if _get_conf('save_dump'):
         _save_dump(data_dump)
 
 if __name__ == "__main__":
@@ -1052,18 +1125,10 @@ if __name__ == "__main__":
     else:
         python_version = 2
 
-    try:
-        MySQLdb = importlib.import_module('MySQLdb')
-    except ImportError as error:
-        # Output expected ImportErrors.
-        print("Error load MySQLdb, check if MySQLdb is installed!")
-        #print(error.__class__.__name__ + ": " + error.message)
+    if not load_MySQL_lib():
         os._exit(0)
 
-    except Exception as exception:
-        # Output unexpected Exceptions.
-        print(exception, False)
-        print(exception.__class__.__name__ + ": " + exception.message)
+    if not _OptionParser():
         os._exit(0)
 
     main()
