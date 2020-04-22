@@ -329,6 +329,11 @@ def _check_read_config():
 
 
 
+def _clean_end_process():
+    _clean_check_count_data()
+    _clean_list_error()
+    _clean_fix_insert_mysql()
+
 def _clean_list_tables_backup():
     global mysql_list_tables_save_backup
     mysql_list_tables_save_backup = []
@@ -345,7 +350,14 @@ def _clean_check_count_data():
     global check_count_data
     check_count_data = {}
 
-
+def _clean_fix_insert_mysql():
+    global fix_insert
+    fix_insert['__EFMigrationsHistory']['mysql'] =  {
+        "ls_column": [],
+        "ls_data": [],
+        "ls_id": [],
+        "data": []
+    }
 
 def _check_config_mysql():
     # TODO: pendiente leer config de database.json
@@ -1085,6 +1097,8 @@ def load_MySQL_lib():
     
     return True
 
+
+
 def main():
     global check_count_data
 
@@ -1107,11 +1121,11 @@ def main():
     if _mysql_IsConnect:
         if _mysql_tables_clean():
             _mysql_migration(data_dump)
-            _clean_check_count_data()
         
         _save_error_log(mysql_list_error)
-        _clean_list_error()
         _mysql_disconnect()
+
+        _clean_end_process()
     
     if _get_conf('save_dump'):
         _save_dump(data_dump)

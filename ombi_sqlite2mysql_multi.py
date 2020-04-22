@@ -272,6 +272,9 @@ def main():
 
         ombi_sqlite2mysql._save_json(json_migration, json_migration_data, True, True)
 
+        # Forzamos a que los datos esten limpios para la siguiente ejecucion.
+        ombi_sqlite2mysql._clean_end_process()
+        
         ombi_sqlite2mysql.main()
         print("")
         print("----------------------------------------------------------------")
