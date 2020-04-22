@@ -218,7 +218,7 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
         "ExternalDatabase": {
             "Type": "MySQL",
             "ConnectionString": "Server=192.168.1.200;Port=3306;Database=Ombi_External;User=ombi;Password=ombi",
-            "Skip": "True"
+            "Skip": true
         }
     }
     ```
