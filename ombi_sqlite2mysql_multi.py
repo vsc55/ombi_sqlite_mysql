@@ -202,9 +202,7 @@ def main():
                         opt_connect = str(subval)
 
                 elif case("Skip"):
-                    if subval:
-                        opt_skip = bool(subval)
-        
+                    opt_skip = bool(subval)
 
         if opt_type != "MySQL".lower():
             print("- DataBase ({0}) Skip: Type ({1}) not valid, only support MySQL!".format(key, opt_type))
