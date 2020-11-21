@@ -72,7 +72,7 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
 
    To be able to use multiple servers or databases we will need to manually edit **database.json**.
     ```json
-    $ vi database_multi.json
+    $ vi database.json
     {
         "OmbiDatabase": {
             "Type": "MySQL",
@@ -91,14 +91,18 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
     > The example above will export the **"OmbiDatabase"** and **"SettingsDatabase"** databases to server **"192.168.0.100"** but to different databases on the same server, while the **"ExternalDatabase"** database will be sent to server **"192.168.1.200"**.
 
 5. Start ombi and wait for it to create the tables.
-6. We access the ombi website to finish generating the missing tables. ExternalDatabase tables are not created until they are first accessed. 
+6. We access the ombi website to finish generating the missing tables. **ExternalDatabase tables are not created until they are first accessed.**
    > **No need to start the wizard, just access the web.**
 7. Stop ombi.
+   > **Don't stop ombi right after accessing the web as it takes a while to create all the tables.**
 
 [Go Up](#migration-procedure)
 
 
 ## 4. Data Migration
+
+When it comes to migrating the data, we have several different ways of doing it.
+We can export everything to a single database (step 4.1), to different databases or to different mysql servers (step 4.2).
 
 ### 4.1. Data Migration (*Single Database*)
 > For data migration we will need the file **"migration.json"** that contains the locations of the SQLite databases.
