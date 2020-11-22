@@ -144,12 +144,12 @@ def _OptionParser_apply():
     opt['force']        = opts.force
     opt['no_backup']    = opts.no_backup
     opt['save_dump']    = opts.save_dump
-    
+
     ombi_sqlite2mysql._set_conf('config', opt['config'])
     ombi_sqlite2mysql._set_conf('force', opt['force'])
     ombi_sqlite2mysql._set_conf('no_backup', opt['no_backup'])
     ombi_sqlite2mysql._set_conf('save_dump', opt['save_dump'])
-    
+
     if opt['force']:
         ombi_sqlite2mysql._clean_list_tables_skip_clean()
 
@@ -161,20 +161,20 @@ def _OptionParser_apply():
 def main():
     json_db         = _get_path_file_in_conf(json_file_database)
     json_db_multi   = _get_path_file_in_conf(json_file_database_multi)
-    json_migration  = _get_path_file_in_conf(json_file_migration)    
+    json_migration  = _get_path_file_in_conf(json_file_migration)
 
     if not os.path.isfile(json_db_multi):
         print("Error: File {0} not exist!!!".format(json_db_multi))
         return False
-        
+
     json_db_multi_data = ombi_sqlite2mysql._read_json(json_db_multi)
     if json_db_multi_data is None:
         print ("Error: No data has been read from the json ({0}) file, please review it.!!!!".format(json_db_multi))
         return False
-    
+
 
     for key, value in json_db_multi_data.items():
-        
+
         if not key in list_db:
             print("- DataBase ({0}) Skip: Name DataBase is not valid!".format(key))
             print("")
@@ -208,7 +208,7 @@ def main():
             print("- DataBase ({0}) Skip: Type ({1}) not valid, only support MySQL!".format(key, opt_type))
             print("")
             continue
-       
+
         if opt_skip:
             print("- DataBase ({0}) Skip: User defined Skip!".format(key))
             print("")
@@ -250,12 +250,12 @@ def main():
         print("  -------------------")
         print("")
         json_migration_data = {
-            key: {  
+            key: {
                 "ConnectionString": "Data Source={0}".format(opt_file),
                 "Type": "sqlite"
-            } 
+            }
         }
-        
+
         new_cfg = {
             'host': mysql_host,
             'port': mysql_port,
@@ -272,13 +272,13 @@ def main():
 
         # Forzamos a que los datos esten limpios para la siguiente ejecucion.
         ombi_sqlite2mysql._clean_end_process()
-        
+
         ombi_sqlite2mysql.main()
         print("")
         print("----------------------------------------------------------------")
         print("----------------------------------------------------------------")
         print("")
-        
+
 
     print("> Updating database.json...")
     ombi_sqlite2mysql._save_json(json_db, json_db_multi_data, True, True)
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     else:
         python_version = 2
         ombi_sqlite2mysql.python_version = 2
-    
+
     if ( StrictVersion(ombi_sqlite2mysql.__version__) > StrictVersion(ombi_sqlite2mysql_version)):
         print("Error: Version ombi_sqlite2mysql is not valid, need {0} or high!!".format(ombi_sqlite2mysql_version))
         print("")
