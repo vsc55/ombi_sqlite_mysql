@@ -1,5 +1,7 @@
 # Migration procedure
 
+Python3 is recommended.
+
 * 1\. [Create database and user in the server MySql/MariaDB](#1-create-database-and-user-in-the-server-mysqlmariadb)
     * 1.1\. [A Single Database](#11-a-single-database)
     * 1.2\. [In Multiple DataBases or Servers MySql/MariaDB](#12-in-multiple-databases-or-servers-mysqlmariadb)
