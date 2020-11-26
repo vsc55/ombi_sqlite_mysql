@@ -1138,6 +1138,8 @@ if __name__ == "__main__":
         python_version = 3
     else:
         python_version = 2
+        print("Python2 is not supported, use python3!")
+        os._exit(0)
 
     if not load_MySQL_lib():
         os._exit(0)

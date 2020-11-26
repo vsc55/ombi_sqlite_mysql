@@ -1,35 +1,38 @@
 # Migration procedure
 
-Python3 is recommended.
-
-* 1\. [Create database and user in the server MySql/MariaDB](#1-create-database-and-user-in-the-server-mysqlmariadb)
-    * 1.1\. [A Single Database](#11-a-single-database)
-    * 1.2\. [In Multiple DataBases or Servers MySql/MariaDB](#12-in-multiple-databases-or-servers-mysqlmariadb)
-* 2\. [Download Script and install dependencies](#2-download-script-and-install-dependencies)
-* 3\. [Create and prepare tables](#3-create-and-prepare-tables)
-* 4\. [Data Migration](#4-data-migration)
-    * 4.1\. [Data Migration (*Single Database*)](#41-data-migration-single-database)
-    * 4.2\. [Data Migration (*Multiple DataBases or Servers MySql/MariaDB*)](#42-data-migration-multiple-databases-or-servers-mysqlmariadb)
-* 5\. [Help](#5-help)
-* 6\. [F.A.Q.](#6-faq)
+* 1\. [Requirements](#1-requirements)
+* 2\. [Create database and user in the server MySql/MariaDB](#2-create-database-and-user-in-the-server-mysqlmariadb)
+    * 2.1\. [A Single Database](#21-a-single-database)
+    * 2.2\. [In Multiple DataBases or Servers MySql/MariaDB](#22-in-multiple-databases-or-servers-mysqlmariadb)
+* 3\. [Download Script and install dependencies](#3-download-script-and-install-dependencies)
+* 4\. [Create and prepare tables](#4-create-and-prepare-tables)
+* 5\. [Data Migration](#5-data-migration)
+    * 5.1\. [Data Migration (*Single Database*)](#51-data-migration-single-database)
+    * 5.2\. [Data Migration (*Multiple DataBases or Servers MySql/MariaDB*)](#52-data-migration-multiple-databases-or-servers-mysqlmariadb)
+* 6\. [Help](#6-help)
+* 7\. [F.A.Q.](#7-faq)
 
 > This would be the procedure to migrate the Ombi databases from SQLite to a MySQL/MariaDB server.
 > 
 > If there is an error you can contact Discour or you can open an incident [here](https://github.com/vsc55/ombi_sqlite_mysql/issues).
 
 
-## 1. Create database and user in the server MySql/MariaDB
+## 1. Requirements
+* Python3
+* Ombi version 4.0.728 or higher
+
+## 2. Create database and user in the server MySql/MariaDB
 
 On the MySQL/MariaDB server we will create the database and the user that we will use later.
 
-### 1.1. A Single Database
+### 2.1. A Single Database
 ```mysql
 CREATE DATABASE IF NOT EXISTS `Ombi` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 CREATE USER 'ombi'@'%' IDENTIFIED BY 'ombi';
 GRANT ALL PRIVILEGES ON `Ombi`.* TO 'ombi'@'%' WITH GRANT OPTION;
 ```
 
-### 1.2. In Multiple DataBases or Servers MySql/MariaDB
+### 2.2. In Multiple DataBases or Servers MySql/MariaDB
 ```mysql
 CREATE DATABASE IF NOT EXISTS `Ombi` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 CREATE DATABASE IF NOT EXISTS `Ombi_Settings` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
@@ -43,7 +46,7 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
 
 [Go Up](#migration-procedure)
 
-## 2. Download Script and install dependencies
+## 3. Download Script and install dependencies
 1. Download the script.
     ```bash
     $ git clone https://github.com/vsc55/ombi_sqlite_mysql.git ombi_sqlite_mysql
@@ -55,17 +58,18 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
     $ apt-get install python-mysqldb    # Debian/Ubuntu
     $ emerge -va mysqlclient            # Gentoo
     $ pip install mysqlclient           # Python Pip
+    $ python -m pip install mysqlclient # Python Pip
     ```
 
 [Go Up](#migration-procedure)
 
-## 3. Create and prepare tables
+## 4. Create and prepare tables
 1. Update to the latest version of ombi.
 2. Stop ombi
 3. Create or Modify **database.json** to use mysql.
     ```bash
     $ python ombi_sqlite2mysql.py -c /etc/Ombi --only_db_json --host 192.168.1.100 --db Ombi --user ombi --passwd ombi
-    Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
+    Migration tool from SQLite to MySql/MariaDB for ombi (3.0.4) By VSC55
 
     Generate file "database.json":
     - Saving in (/etc/Ombi/database.json)... [✓]
@@ -92,21 +96,19 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
     ```
     > The example above will export the **"OmbiDatabase"** and **"SettingsDatabase"** databases to server **"192.168.0.100"** but to different databases on the same server, while the **"ExternalDatabase"** database will be sent to server **"192.168.1.200"**.
 
-5. Start ombi and wait for it to create the tables.
-6. We access the ombi website to finish generating the missing tables. **ExternalDatabase tables are not created until they are first accessed.**
-   > **No need to start the wizard, just access the web.**
-7. Stop ombi.
-   > **Don't stop ombi right after accessing the web as it takes a while to create all the tables.**
-
+5. Run the following command:
+    ```
+    $ ombi --migrate
+    ```
 [Go Up](#migration-procedure)
 
 
-## 4. Data Migration
+## 5. Data Migration
 
 When it comes to migrating the data, we have several different ways of doing it.
 We can export everything to a single database (step 4.1), to different databases or to different mysql servers (step 4.2).
 
-### 4.1. Data Migration (*Single Database*)
+### 5.1. Data Migration (*Single Database*)
 > For data migration we will need the file **"migration.json"** that contains the locations of the SQLite databases.
 > 
 > If this file does not exist, it will be created and will search the databases in the folder specified with the parameter **"--config"**.
@@ -116,7 +118,7 @@ We can export everything to a single database (step 4.1), to different databases
 > ### If we do not want to export OmbiExternal.
 > ```bash
 > $ python ombi_sqlite2mysql.py -c /etc/Ombi --only_manager_json
-> Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
+> Migration tool from SQLite to MySql/MariaDB for ombi (3.0.4) By VSC55
 >
 > Generate file "migration.json":
 > - Saving in (/etc/Ombi/migration.json)... [✓]
@@ -142,7 +144,7 @@ We can export everything to a single database (step 4.1), to different databases
 
     ```bash
     $ python ombi_sqlite2mysql.py -c /etc/Ombi --host 192.168.1.100 --db Ombi --user ombi --passwd ombi
-    Migration tool from SQLite to MySql/MariaDB for ombi (3.0.2) By VSC55
+    Migration tool from SQLite to MySql/MariaDB for ombi (3.0.4) By VSC55
 
     Generate file "migration.json":
     - Saving in (/etc/Ombi/migration.json)... [✓]
@@ -186,7 +188,7 @@ We can export everything to a single database (step 4.1), to different databases
 [Go Up](#migration-procedure)
 
 
-### 4.2. Data Migration (*Multiple DataBases or Servers MySql/MariaDB*)
+### 5.2. Data Migration (*Multiple DataBases or Servers MySql/MariaDB*)
 > For data migration to multiple databases or servers we will need the file **"database_multi.json"** that contains the locations of the servers where we are going to export the data.
 
 1. To create the file **"database_multi.json"** we will use the file **"database.json"** so we will only have to rename it.
@@ -416,7 +418,7 @@ We can export everything to a single database (step 4.1), to different databases
 [Go Up](#migration-procedure)
 
 
-## 5. Help
+## 6. Help
 ```bash
 $ python ombi_sqlite2mysql.py -h
 Migration tool from SQLite to MySql/MariaDB for ombi (3.0.4) By VSC55
@@ -462,23 +464,7 @@ Options:
 [Go Up](#migration-procedure)
 
 
-## 6. F.A.Q.
-
-**P: When running `pip install mysqlclient` on Windows, I get error messages about Microsoft Visual C ++ 14.0**:
-
-S: We need to install the Microsoft Visual Building tools to make sure we can download and install dependencies for Python. This can be downloaded [here](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16).
-
-Make sure you use the following config:
-![](images/faq01_img01.png)
-
-Once installed you probably need to reboot your system for the changes to take effect.
-
-After you have rebooted, try the code again in command prompt:
-```cmd
-C:\> pip install mysqlclient
-```
-
----
+## 7. F.A.Q.
 
 **P: Errors appear in the verification of the migrated data saying that there is more data in SQLite than in MySQL or vice versa.**
 ```bash
@@ -525,6 +511,5 @@ $ python ombi_sqlite2mysql_multi.py -c /etc/Ombi --force
 ```
 
 ---
-
 
 [Go Up](#migration-procedure)

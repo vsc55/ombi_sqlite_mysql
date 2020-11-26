@@ -295,6 +295,8 @@ if __name__ == "__main__":
     else:
         python_version = 2
         ombi_sqlite2mysql.python_version = 2
+        print("Python2 is not supported, use python3!")
+        os._exit(0)
 
     if ( StrictVersion(ombi_sqlite2mysql.__version__) > StrictVersion(ombi_sqlite2mysql_version)):
         print("Error: Version ombi_sqlite2mysql is not valid, need {0} or high!!".format(ombi_sqlite2mysql_version))
