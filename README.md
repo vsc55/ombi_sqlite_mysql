@@ -106,7 +106,7 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
 ## 5. Data Migration
 
 When it comes to migrating the data, we have several different ways of doing it.
-We can export everything to a single database (step 4.1), to different databases or to different mysql servers (step 4.2).
+We can export everything to a single database (step 5.1), to different databases or to different mysql servers (step 5.2).
 
 ### 5.1. Data Migration (*Single Database*)
 > For data migration we will need the file **"migration.json"** that contains the locations of the SQLite databases.
