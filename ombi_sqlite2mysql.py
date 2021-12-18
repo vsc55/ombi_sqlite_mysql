@@ -20,10 +20,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __author__ = "VSC55"
-__copyright__ = "Copyright © 2020, Javier Pastor"
+__copyright__ = "Copyright © 2021, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
-__version__ = "3.0.4"
+__version__ = "3.0.5"
 __maintainer__ = 'Javier Pastor'
 __email__ = "python@cerebelum.net"
 __status__ = "Development"

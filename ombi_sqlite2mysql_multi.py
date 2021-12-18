@@ -20,7 +20,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __author__ = "VSC55"
-__copyright__ = "Copyright © 2020, Javier Pastor"
+__copyright__ = "Copyright © 2021, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
 __version__ = "1.0.0"
@@ -30,17 +30,13 @@ __status__ = "Development"
 
 import sys
 import os
-import importlib
-import time
-import datetime
-import json
 import ombi_sqlite2mysql
 from optparse import OptionParser
 from distutils.version import StrictVersion
 
 
 python_version = None
-ombi_sqlite2mysql_version = "3.0.4"
+ombi_sqlite2mysql_version = "3.0.5"
 json_file_database_multi = "database_multi.json"
 json_file_migration = "migration.json"
 json_file_database = "database.json"

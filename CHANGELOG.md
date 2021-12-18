@@ -1,3 +1,10 @@
+# Version 3.0.5
+- Fix: #18 Problem checking table names (upper/lower case) and caused him to delete the content of `__EFMigrationsHistory`.
+- Fix: #17 Fix format error
+
+# Version 3.0.4
+- Add Script Export Multi Server MySQL. Thanks iCare.Kuraki for testing on Windows.
+
 # Version 3.0.3
 - Add support Python 3.
 - Control error in importing modules.
@@ -8,8 +15,7 @@
 - Move _mysql_database_json_update to the start of main().
 
 # Version 3.0.1
-## FIX:
-- Control table content `__EFMigrationsHistory`.
+- Fix: Control table content `__EFMigrationsHistory`.
   
 # Version 3.0.0
 - Add support to automatically export the data to the mysql server.
