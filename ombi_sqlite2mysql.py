@@ -65,12 +65,12 @@ mysql_db_file = "data_ombi.mysql"
 mysql_log_err = "insert_error.log"
 mysql_cfg = None
 mysql_conn = None
-mysql_list_tables_save_backup = ['__EFMigrationsHistory']
-mysql_list_tables_skip_clean = ['__EFMigrationsHistory']
+mysql_list_tables_save_backup = ['__EFMigrationsHistory'.lower()]
+mysql_list_tables_skip_clean = ['__EFMigrationsHistory'.lower()]
 mysql_list_error = []
 
 fix_insert = {
-    "__EFMigrationsHistory": {
+    "__EFMigrationsHistory".lower(): {
         "id": "MigrationId",
         "required":{
             "20191103213915_Inital": {
@@ -352,7 +352,7 @@ def _clean_check_count_data():
 
 def _clean_fix_insert_mysql():
     global fix_insert
-    fix_insert['__EFMigrationsHistory']['mysql'] =  {
+    fix_insert['__EFMigrationsHistory'.lower()]['mysql'] =  {
         "ls_column": [],
         "ls_data": [],
         "ls_id": [],
@@ -672,6 +672,7 @@ def _mysql_tables_clean():
 
     list_querys = []
     for table, count in return_query[1]:
+        table = table.lower()
         if count == 0:
             #print("- [EMPTY] -> {0}".format(table))
             continue
@@ -768,6 +769,7 @@ def _sqlite_dump():
     #check_count_data['__EFMigrationsHistory'] -= 3
 
     for key, val in fix_insert.items():
+        key = key.lower()
         if key not in check_count_data:
                 check_count_data[key] = 0
 
@@ -824,6 +826,7 @@ def _iterdump(connection, db_name):
 
     schema_res = cu.execute(q)
     for table_name, _ in schema_res.fetchall():
+        table_name = table_name.lower()
         if table_name not in check_count_data:
             check_count_data[table_name] = 0
 
