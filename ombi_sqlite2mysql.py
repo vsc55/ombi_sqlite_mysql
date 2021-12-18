@@ -929,7 +929,7 @@ def _fix_insert_read_mysql():
 
         if not return_querys[0]:
             print("")
-            print("- Error: Table \"{0}\" requiered is not exist in the server MySQL!!!").format(k)
+            print("- Error: Table \"{0}\" requiered is not exist in the server MySQL!!!".format(k))
             isAllOk = False
             break
 
