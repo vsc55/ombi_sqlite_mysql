@@ -38,6 +38,7 @@ import json
 import sqlite3
 import copy
 from optparse import OptionParser
+from pprint import pprint
 
 opts = None
 MySQLdb = None
@@ -65,12 +66,13 @@ mysql_db_file = "data_ombi.mysql"
 mysql_log_err = "insert_error.log"
 mysql_cfg = None
 mysql_conn = None
+mysql_lower_case_table_names = None
 mysql_list_tables_save_backup = ['__EFMigrationsHistory'.lower()]
 mysql_list_tables_skip_clean = ['__EFMigrationsHistory'.lower()]
 mysql_list_error = []
 
-fix_insert = {
-    "__EFMigrationsHistory".lower(): {
+fix_insert_default = {
+    "__EFMigrationsHistory": {
         "id": "MigrationId",
         "required":{
             "20191103213915_Inital": {
@@ -112,6 +114,7 @@ fix_insert = {
         }
     }
 }
+fix_insert = {}
 
 # obsolete tables
 sqlite_table_ignore = ['Logs', 'HangFire.AggregatedCounter', 'HangFire.Counter', 'HangFire.Hash', 'HangFire.Job', 'HangFire.JobParameter', 'HangFire.JobQueue', 'HangFire.List', 'HangFire.Schema', 'HangFire.Server', 'HangFire.Set', 'HangFire.State']
@@ -352,7 +355,12 @@ def _clean_check_count_data():
 
 def _clean_fix_insert_mysql():
     global fix_insert
-    fix_insert['__EFMigrationsHistory'.lower()]['mysql'] =  {
+
+    table_name = "__EFMigrationsHistory"
+    if _mysql_lower_case is True:
+        table_name = table_name.lower()
+
+    fix_insert[table_name]['mysql'] =  {
         "ls_column": [],
         "ls_data": [],
         "ls_id": [],
@@ -377,6 +385,7 @@ def _check_config_mysql():
     _set_mysql_cfg(new_cfg)
 
 def _mysql_IsConnect():
+    global mysql_conn
     if mysql_conn is None:
         return False
     else:
@@ -387,6 +396,7 @@ def _mysql_IsConnect():
             return False
 
 def _mysql_connect(show_msg=True):
+    global fix_insert
     global mysql_conn
     msg_err = None
 
@@ -425,6 +435,16 @@ def _mysql_connect(show_msg=True):
 
     if show_msg:
         print("[✓]")
+
+
+    _mysql_get_lower_case_table_name()
+
+    # Set default values, fix table
+    table_name_MigrationsHistory = "__EFMigrationsHistory"
+    if _mysql_lower_case is True:
+        table_name_MigrationsHistory = table_name_MigrationsHistory.lower()
+
+    fix_insert[table_name_MigrationsHistory] = fix_insert_default['__EFMigrationsHistory']
 
     return True
 
@@ -560,7 +580,36 @@ def _mysql_fetchall_querys(query, ignorer_error=[]):
     cur = None
     return data_return
 
+def _mysql_lower_case():
+    global mysql_lower_case_table_names
+    # if mysql_lower_case_table_names is None:
+    #     return False
+    return mysql_lower_case_table_names
 
+def _mysql_get_lower_case_table_name():
+    global mysql_lower_case_table_names
+    # Default on Unix-based systems: 0 (case-sensitive)
+    # Default on Windows: 1 (all lowercase)
+    # Default on Mac OS X: 2 (all lowercase)
+    # https://support.cpanel.net/hc/en-us/articles/360052452713-Mysql-MariaDB-setting-for-case-sensitivity-uppercase-lowercase-
+
+    return_query = _mysql_fetchall_querys(["show variables where variable_name = 'lower_case_table_names'"])
+
+    if (return_query[0][0][1] == "0"):
+        mysql_lower_case_table_names = False
+    else:
+        mysql_lower_case_table_names = True
+    
+    return mysql_lower_case_table_names
+
+def _mysql_fix_name_table(name_table):
+    return_data = ""
+    if not name_table is None:
+        return_data = name_table
+        if _mysql_lower_case is True:
+            return_data = return_data.lower()
+
+    return return_data
 
 def _mysql_migration(data_dump):
     if not _mysql_IsConnect:
@@ -620,8 +669,14 @@ def _mysql_migration_check():
         table = i[0]
         count = i[1]
         count_sqlite = 0
-        if check_count_data is not None and table in check_count_data:
-            count_sqlite = check_count_data[table]
+        tableLower = table.lower()
+
+        # print(table)
+        # pprint(check_count_data)
+        # print("-------------------------------------------------------------")
+
+        if check_count_data is not None and tableLower in check_count_data:
+            count_sqlite = check_count_data[tableLower]
 
         if count != count_sqlite:
             isOkMigration = False
@@ -633,6 +688,7 @@ def _mysql_migration_check():
 
     return isOkMigration
 
+# TODO REVISAR
 def _mysql_tables_clean():
     global check_count_data
 
@@ -672,32 +728,36 @@ def _mysql_tables_clean():
 
     list_querys = []
     for table, count in return_query[1]:
-        table = table.lower()
+        tableLower = table.lower()
+
+        # if _mysql_lower_case is True:
+        #     table = table.lower()
+
         if count == 0:
             #print("- [EMPTY] -> {0}".format(table))
             continue
 
-        if table in mysql_list_tables_save_backup:
-            table_temp = "{0}_migration_backup_{1}".format(table, datetime.datetime.now().strftime("%Y%m%d%H%M%S_%f"))
+        if tableLower in mysql_list_tables_save_backup:
+            table_temp = "{0}_migration_backup_{1}".format(table if _mysql_lower_case is True else tableLower, datetime.datetime.now().strftime("%Y%m%d%H%M%S_%f"))
 
             #print("- [BACKUP] -> {0} in {1}".format(table, table_temp))
             print("- [BACKUP] -> {0}".format(table))
 
-            q = "CREATE TABLE `{0}` LIKE `{1}`;".format(table_temp, table)
+            q = "CREATE TABLE `{0}` LIKE `{1}`;".format(table_temp, table if _mysql_lower_case is True else tableLower)
             list_querys.append(q)
-            q = "INSERT INTO `{0}` SELECT * FROM `{1}`;".format(table_temp, table)
+            q = "INSERT INTO `{0}` SELECT * FROM `{1}`;".format(table_temp, table if _mysql_lower_case is True else tableLower)
             list_querys.append(q)
 
-        if table in mysql_list_tables_skip_clean:
-            if table not in check_count_data:
-                check_count_data[table] = 0
+        if tableLower in mysql_list_tables_skip_clean:
+            if tableLower not in check_count_data:
+                check_count_data[tableLower] = 0
 
-            check_count_data[table] += count
+            check_count_data[tableLower] += count
             print("- [SKIP  ] -> {0} -> rows: {1}".format(table, count))
             continue
 
         print("- [CLEAN ] -> {0} -> rows: {1}".format(table, count))
-        q = "TRUNCATE TABLE `{0}`;".format(table)
+        q = "TRUNCATE TABLE `{0}`;".format(table if _mysql_lower_case is True else tableLower)
         list_querys.append(q)
 
     print("")
@@ -769,9 +829,11 @@ def _sqlite_dump():
     #check_count_data['__EFMigrationsHistory'] -= 3
 
     for key, val in fix_insert.items():
-        key = key.lower()
-        if key not in check_count_data:
-                check_count_data[key] = 0
+
+        tableLower = key.lower()
+
+        if tableLower not in check_count_data:
+            check_count_data[tableLower] = 0
 
         yield('--')
         yield('-- Required Insert: %s;' % key)
@@ -798,13 +860,13 @@ def _sqlite_dump():
                         q_val += ", "
                     q_val += "'{0}'".format(data_val)
 
-                q = 'INSERT INTO `{0}` ({1}) VALUES({2});'.format(key, q_col, q_val)
+                q = 'INSERT INTO `{0}` ({1}) VALUES({2});'.format(key if _mysql_lower_case is True else tableLower, q_col, q_val)
                 #print("------------------------")
                 #print(q)
                 #print("------------------------")
 
                 yield q
-                check_count_data[key] += 1
+                check_count_data[tableLower] += 1
     print("")
 
 def _iterdump(connection, db_name):
@@ -826,11 +888,15 @@ def _iterdump(connection, db_name):
 
     schema_res = cu.execute(q)
     for table_name, _ in schema_res.fetchall():
-        table_name = table_name.lower()
-        if table_name not in check_count_data:
-            check_count_data[table_name] = 0
+        
+        table_name_lower = table_name.lower()
+        # if _mysql_lower_case is True:
+        #     table_name = table_name.lower()
 
-        if table_name in ['sqlite_sequence', 'sqlite_stat1'] or table_name.startswith('sqlite_'):
+        if table_name_lower not in check_count_data:
+            check_count_data[table_name_lower] = 0
+
+        if table_name_lower in ['sqlite_sequence', 'sqlite_stat1'] or table_name.startswith('sqlite_'):
             continue
         elif table_name in sqlite_table_ignore:
             continue
@@ -866,8 +932,8 @@ def _iterdump(connection, db_name):
             if not q_insert:
                 continue
 
-            q_insert = 'INSERT INTO `{0}` ({1}) VALUES({2})'.format(table_name, q_col, q_insert)
-            check_count_data[table_name] += 1
+            q_insert = 'INSERT INTO `{0}` ({1}) VALUES({2})'.format(table_name if _mysql_lower_case is True else table_name_lower, q_col, q_insert)
+            check_count_data[table_name_lower] += 1
             yield("%s;" % q_insert)
 
     cu.close()
