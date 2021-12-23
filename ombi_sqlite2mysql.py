@@ -23,7 +23,7 @@ __author__ = "VSC55"
 __copyright__ = "Copyright © 2021, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
-__version__ = "3.0.5"
+__version__ = "3.0.6"
 __maintainer__ = 'Javier Pastor'
 __email__ = "python@cerebelum.net"
 __status__ = "Development"
@@ -38,7 +38,6 @@ import json
 import sqlite3
 import copy
 from optparse import OptionParser
-from pprint import pprint
 
 opts = None
 MySQLdb = None

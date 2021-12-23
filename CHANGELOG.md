@@ -1,3 +1,6 @@
+# Version 3.0.6
+- Fix: #17 Detect the "lower_case_table_name" configuration of the MySQL/MariaDB server, to know if the table name is case sensitive.
+
 # Version 3.0.5
 - Fix: #18 Problem checking table names (upper/lower case) and caused him to delete the content of `__EFMigrationsHistory`.
 - Fix: #17 Fix format error
