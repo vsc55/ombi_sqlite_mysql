@@ -32,8 +32,7 @@ import sys
 import os
 import ombi_sqlite2mysql
 from optparse import OptionParser
-from distutils.version import StrictVersion
-
+from packaging import version
 
 python_version = None
 ombi_sqlite2mysql_version = "3.0.5"
@@ -294,7 +293,7 @@ if __name__ == "__main__":
         print("Python2 is not supported, use python3!")
         os._exit(0)
 
-    if ( StrictVersion(ombi_sqlite2mysql.__version__) > StrictVersion(ombi_sqlite2mysql_version)):
+    if ( version.parse(ombi_sqlite2mysql.__version__) > version.parse(ombi_sqlite2mysql_version)):
         print("Error: Version ombi_sqlite2mysql is not valid, need {0} or high!!".format(ombi_sqlite2mysql_version))
         print("")
         os._exit(0)
