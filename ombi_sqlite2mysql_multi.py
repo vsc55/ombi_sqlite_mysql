@@ -23,18 +23,18 @@ __author__ = "VSC55"
 __copyright__ = "Copyright © 2021, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __maintainer__ = 'Javier Pastor'
 __email__ = "python@cerebelum.net"
 __status__ = "Development"
 
 import sys
 import os
+import importlib
 import ombi_sqlite2mysql
 from optparse import OptionParser
-from distutils.version import StrictVersion
 
-
+version = None
 python_version = None
 ombi_sqlite2mysql_version = "3.0.5"
 json_file_database_multi = "database_multi.json"
@@ -281,6 +281,25 @@ def main():
     print("")
     print("")
 
+def load_Packaging_lib():
+    global version
+
+    try:
+        version = importlib.import_module('packaging.version')
+    except ImportError as error:
+        # Output expected ImportErrors.
+        print("Error load packaging, check if packaging is installed!")
+        #print(error.__class__.__name__ + ": " + error.message)
+        return False
+
+    except Exception as exception:
+        # Output unexpected Exceptions.
+        print(exception, False)
+        print(exception.__class__.__name__ + ": " + exception.message)
+        return False
+
+    return True
+
 if __name__ == "__main__":
     print("Migration tool from SQLite to Multi MySql/MariaDB for ombi ({0}) By {1}".format(__version__, __author__))
     print("")
@@ -294,7 +313,10 @@ if __name__ == "__main__":
         print("Python2 is not supported, use python3!")
         os._exit(0)
 
-    if ( StrictVersion(ombi_sqlite2mysql.__version__) > StrictVersion(ombi_sqlite2mysql_version)):
+    if not load_Packaging_lib():
+        os._exit(0)
+
+    if (version.parse(ombi_sqlite2mysql.__version__) < version.parse(ombi_sqlite2mysql_version)):
         print("Error: Version ombi_sqlite2mysql is not valid, need {0} or high!!".format(ombi_sqlite2mysql_version))
         print("")
         os._exit(0)
