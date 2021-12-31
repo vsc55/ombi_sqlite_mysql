@@ -54,12 +54,21 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
     $ chmod +x *.py
     ```
 2. Install the dependencies according to the operating system we use.
+   1. Lib python-mysqldb:
     ```bash
     $ apt-get install python-mysqldb    # Debian/Ubuntu
-    $ emerge -va mysqlclient            # Gentoo
+    $ emerge -va dev-python/mysqlclient # Gentoo
     $ pip install mysqlclient           # Python Pip
     $ python -m pip install mysqlclient # Python Pip
     ```
+   2. Lib dev-python/packaging:
+    ```bash
+    $ apt-get install python-packaging  # Debian/Ubuntu
+    $ emerge -va dev-python/packaging   # Gentoo
+    $ pip install packaging             # Python Pip
+    $ python -m pip install packaging   # Python Pip
+    ```
+
 
 [Go Up](#migration-procedure)
 
@@ -98,8 +107,12 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
 
 5. Run the following command:
     ```
-    $ ombi --migrate
+    $ /opt/ombi/Ombi --migrate
     ```
+    > **Note:**
+    We assume that Ombi is installed in **'/opt/ombi'**, if it is not installed in that location use the corresponding path.
+    If you are using docker ombi is installed in **'/opt/ombi'**
+
 [Go Up](#migration-procedure)
 
 

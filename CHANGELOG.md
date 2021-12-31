@@ -1,3 +1,7 @@
+# Version 3.0.7
+- Fix: #21 Stop using "distutils" as it is deprecated. Thanks @Berserkir-Wolf.
+- Update: Update documentation.
+
 # Version 3.0.6
 - Fix: #17 Detect the "lower_case_table_name" configuration of the MySQL/MariaDB server, to know if the table name is case sensitive.
 
