@@ -41,7 +41,7 @@ json_file_database_multi = "database_multi.json"
 json_file_migration = "migration.json"
 json_file_database = "database.json"
 
-list_db = {'OmbiDatabase':'Ombi.db', 'SettingsDatabase':'OmbiSettings.db', 'ExternalDatabase':'OmbiExternal.db'}
+list_db = {'OmbiDatabase': 'Ombi.db', 'SettingsDatabase': 'OmbiSettings.db', 'ExternalDatabase': 'OmbiExternal.db'}
 
 opts = None
 opt = {
@@ -116,7 +116,6 @@ class Switch:
         return self.value in values
 
 
-
 def _get_path_file_in_conf(file_name):
     if opt['config'] and file_name:
         return os.path.join(opt['config'], file_name)
@@ -134,12 +133,13 @@ def _OptionParser():
     opts, _ = op.parse_args()
     return _OptionParser_apply()
 
+
 def _OptionParser_apply():
     global opt
-    opt['config']       = opts.config
-    opt['force']        = opts.force
-    opt['no_backup']    = opts.no_backup
-    opt['save_dump']    = opts.save_dump
+    opt['config'] = opts.config
+    opt['force'] = opts.force
+    opt['no_backup'] = opts.no_backup
+    opt['save_dump'] = opts.save_dump
 
     ombi_sqlite2mysql._set_conf('config', opt['config'])
     ombi_sqlite2mysql._set_conf('force', opt['force'])
@@ -154,10 +154,11 @@ def _OptionParser_apply():
 
     return True
 
+
 def main():
-    json_db         = _get_path_file_in_conf(json_file_database)
-    json_db_multi   = _get_path_file_in_conf(json_file_database_multi)
-    json_migration  = _get_path_file_in_conf(json_file_migration)
+    json_db = _get_path_file_in_conf(json_file_database)
+    json_db_multi = _get_path_file_in_conf(json_file_database_multi)
+    json_migration = _get_path_file_in_conf(json_file_migration)
 
     if not os.path.isfile(json_db_multi):
         print("Error: File {0} not exist!!!".format(json_db_multi))
@@ -165,27 +166,26 @@ def main():
 
     json_db_multi_data = ombi_sqlite2mysql._read_json(json_db_multi)
     if json_db_multi_data is None:
-        print ("Error: No data has been read from the json ({0}) file, please review it.!!!!".format(json_db_multi))
+        print("Error: No data has been read from the json ({0}) file, please review it.!!!!".format(json_db_multi))
         return False
-
 
     for key, value in json_db_multi_data.items():
 
-        if not key in list_db:
+        if key not in list_db:
             print("- DataBase ({0}) Skip: Name DataBase is not valid!".format(key))
             print("")
             continue
 
-        opt_type    = None
+        opt_type = None
         opt_connect = None
-        opt_skip    = False
-        opt_file    = _get_path_file_in_conf(list_db[key])
+        opt_skip = False
+        opt_file = _get_path_file_in_conf(list_db[key])
 
-        mysql_host  = "localhost"
-        mysql_port  = "3306"
-        mysql_db    = "Ombi"
-        mysql_user  = "ombi"
-        mysql_pass  = "ombi"
+        mysql_host = "localhost"
+        mysql_port = "3306"
+        mysql_db = "Ombi"
+        mysql_user = "ombi"
+        mysql_pass = "ombi"
 
         for subkey, subval in value.items():
             with Switch(subkey, invariant_culture_ignore_case=True) as case:
@@ -275,21 +275,21 @@ def main():
         print("----------------------------------------------------------------")
         print("")
 
-
     print("> Updating database.json...")
     ombi_sqlite2mysql._save_json(json_db, json_db_multi_data, True, True)
     print("")
     print("")
+
 
 def load_Packaging_lib():
     global version
 
     try:
         version = importlib.import_module('packaging.version')
-    except ImportError as error:
+    except ImportError:
         # Output expected ImportErrors.
         print("Error load packaging, check if packaging is installed!")
-        #print(error.__class__.__name__ + ": " + error.message)
+        # print(error.__class__.__name__ + ": " + error.message)
         return False
 
     except Exception as exception:
@@ -299,6 +299,7 @@ def load_Packaging_lib():
         return False
 
     return True
+
 
 if __name__ == "__main__":
     print("Migration tool from SQLite to Multi MySql/MariaDB for ombi ({0}) By {1}".format(__version__, __author__))
