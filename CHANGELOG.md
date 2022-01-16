@@ -1,3 +1,6 @@
+# Version 3.0.8
+- Fix: #22 Linting: E231,E303,E302,E221,E211,E303,E713,E265,W0612,E203,E231,E111,E222. Thanks @deathbybandaid.
+
 # Version 3.0.7
 - Fix: #21 Stop using "distutils" as it is deprecated. Thanks @Berserkir-Wolf.
 - Update: Update documentation.
