@@ -20,10 +20,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 __author__ = "VSC55"
-__copyright__ = "Copyright © 2021, Javier Pastor"
+__copyright__ = "Copyright © 2022, Javier Pastor"
 __credits__ = "Javier Pastor"
 __license__ = "GPL"
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 __maintainer__ = 'Javier Pastor'
 __email__ = "python@cerebelum.net"
 __status__ = "Development"
@@ -265,9 +265,6 @@ def main():
         ombi_sqlite2mysql._set_mysql_cfg(new_cfg)
 
         ombi_sqlite2mysql._save_json(json_migration, json_migration_data, True, True)
-
-        # Forzamos a que los datos esten limpios para la siguiente ejecucion.
-        ombi_sqlite2mysql._clean_end_process()
 
         ombi_sqlite2mysql.main()
         print("")
