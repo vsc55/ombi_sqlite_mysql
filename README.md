@@ -56,17 +56,17 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
 2. Install the dependencies according to the operating system we use.
    1. Lib python-mysqldb:
     ```bash
-    $ apt-get install python-mysqldb    # Debian/Ubuntu
     $ emerge -va dev-python/mysqlclient # Gentoo
-    $ pip install mysqlclient           # Python Pip
-    $ python -m pip install mysqlclient # Python Pip
+    $ pip3 install mysqlclient           # Python Pip
+    $ python3 -m pip install mysqlclient # Python Pip
     ```
+    > WARNING: It is not recommended to use the python3-mysqldb package on Debian/Ubutu systems as the version it installs fails with modern versions of MariaDB/MySQL.
    2. Lib dev-python/packaging:
     ```bash
-    $ apt-get install python-packaging  # Debian/Ubuntu
+    $ apt-get install python3-packaging  # Debian/Ubuntu
     $ emerge -va dev-python/packaging   # Gentoo
-    $ pip install packaging             # Python Pip
-    $ python -m pip install packaging   # Python Pip
+    $ pip3 install packaging             # Python Pip
+    $ python3 -m pip install packaging   # Python Pip
     ```
 
 
@@ -521,6 +521,54 @@ $ python ombi_sqlite2mysql.py -c /etc/Ombi --force --host 192.168.1.100 --db Omb
 ```bash
 # Multiple DataBases or Servers MySql/MariaDB:
 $ python ombi_sqlite2mysql_multi.py -c /etc/Ombi --force
+```
+---
+**P: A syntax error occurs when you are about to start cleaning the tables**
+```bash
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.8) By VSC55
+
+Generate file "database.json":
+- Saving in (/opt/Ombi/database.json)... [✓]
+
+MySQL > Connecting... [✓]
+- Reading   [############################################################] 1/1
+Read tables [✓]
+
+Check migration.json:
+- OmbiDatabase [SQLite >> Migrate]
+- SettingsDatabase [SQLite >> Migrate]
+- ExternalDatabase [SQLite >> Migrate]
+
+Dump SQLite:
+- OmbiDatabase      [############################################################] 311/311
+- SettingsDatabase  [############################################################] 17/17
+- ExternalDatabase  [############################################################] 9/9
+
+Start clean tables:
+
+* MySQL Error [1064]: You have an error in your SQL syntax; check the manual that corresponds to you
+'SELECT ',QUOTE(tb),' `Ta...' at line 1
+* Error Query: SET group_concat_max_len = 1024 * 1024 * 100;SELECT CONCAT('SELECT * FROM (',GROUP_CO
+ `Table` ASC ;')INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables
+
+
+* MySQL Error [1064]: You have an error in your SQL syntax; check the manual that corresponds to you
+* Error Query: EXECUTE s; DEALLOCATE PREPARE s;
+
+Traceback (most recent call last):
+  File "ombi_sqlite2mysql.py", line 1250, in <module>
+    main()
+  File "ombi_sqlite2mysql.py", line 1221, in main
+    if _mysql_tables_clean():
+  File "ombi_sqlite2mysql.py", line 741, in _mysql_tables_clean
+    for table, count in return_query[1]:
+TypeError: 'NoneType' object is not iterable
+```
+S: This error has been detected in debian when using the python3-mysqldb library installed from apt.
+The version installed with apt (1.3.10-2) is old and produces the error with newer databases. The solution is to install the library with pip since the version (2.1.0) installed with pip works correctly. 
+```bash
+# apt-get remove python3-mysqldb
+# pip3 install mysqlclient
 ```
 
 ---
