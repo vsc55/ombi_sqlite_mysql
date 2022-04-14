@@ -25,6 +25,8 @@
 
 On the MySQL/MariaDB server we will create the database and the user that we will use later.
 
+> **NOTE: Just follow one of the following two points. Point 2.1 if we want to use a single database, or point 2.2 if we want to separate the databases.**
+
 ### 2.1. A Single Database
 ```mysql
 CREATE DATABASE IF NOT EXISTS `Ombi` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
@@ -109,6 +111,13 @@ GRANT ALL PRIVILEGES ON `Ombi_External`.* TO 'ombi'@'%' WITH GRANT OPTION;
     ```
     $ /opt/ombi/Ombi --migrate
     ```
+
+    > **Note:**
+    If our sqlite database and json configuration files are stored in a different location than the one where we have Ombi installed, we will have to add the --storage argument.
+    ```bash
+    $ /opt/ombi/Ombi --migrate --storage /etc/Ombi
+    ```
+
     > **Note:**
     We assume that Ombi is installed in **'/opt/ombi'**, if it is not installed in that location use the corresponding path.
     If you are using docker ombi is installed in **'/opt/ombi'**
@@ -567,10 +576,31 @@ TypeError: 'NoneType' object is not iterable
 S: This error has been detected in debian when using the python3-mysqldb library installed from apt.
 The version installed with apt (1.3.10-2) is old and produces the error with newer databases. The solution is to install the library with pip since the version (2.1.0) installed with pip works correctly. 
 ```bash
-# apt-get remove python3-mysqldb
-# pip3 install mysqlclient
+$ apt-get remove python3-mysqldb
+$ pip3 install mysqlclient
 ```
+---
+**P: Table "XXX" requiered is not exist in the server MySQL**
+```bash
+$ python3 ombi_sqlite2mysql.py -c /etc/Ombi  --host 127.0.0.1 --db Ombi --user ombi --passwd ombi
+Migration tool from SQLite to MySql/MariaDB for ombi (3.0.8) By VSC55
 
+Generate file "database.json":
+- Saving in (/etc/Ombi/database.json)... [✓]
+
+MySQL > Connecting... [✓]
+- Reading   [............................................................] 0/1
+- Error: Table "__EFMigrationsHistory" requiered is not exist in the server MySQL!!!
+Read tables [!!]
+
+MySQL > Disconnecting... [✓]
+```
+S: This error typically occurs when tables were not successfully created with the --migrate argument to ombi. This may be because the configuration (database.json file) and the databases are not in the same folder where we have installed ombi. The solution is to add the --storage argument when we run the migration.
+
+In the following example, both the database.json file and the databases are stored in /etc/Ombi:
+```bash
+$ /opt/ombi/Ombi --migrate --storage /etc/Ombi
+```
 ---
 
 [Go Up](#migration-procedure)
