@@ -19,8 +19,7 @@ WORKDIR /opt/ombi_sqlite_mysql
 COPY --chown=root:root ["ombi_sqlite2mysql.py", "ombi_sqlite2mysql_multi.py", "./"]
 
 #Fix, hub.docker.com auto buils
-RUN \
-	chmod +x /opt/ombi_sqlite_mysql/*.{py,sh}
+RUN chmod +x /opt/ombi_sqlite_mysql/*.py /opt/ombi_sqlite_mysql/*.sh
 
 ENV HTTP_PORT=5000
 
