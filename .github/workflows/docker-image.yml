@@ -4,9 +4,9 @@ on:
   push:
     branches:
       - 'master'
-    # tags:
-    #   - '*.*.*-*'
-    #   - '*.*.*-*-*'
+    tags:
+      - 'Release *.*.*'
+      - 'Release *.*.* / Multi *.*.*'
 
 jobs:
 
