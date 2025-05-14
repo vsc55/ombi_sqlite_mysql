@@ -660,23 +660,55 @@ def _mysql_migration(data_dump):
 
 
 def _mysql_migration_check():
-
-    if not _mysql_IsConnect:
+    if not _mysql_IsConnect():
         return False
 
     arr_query = []
 
-    q = "SET group_concat_max_len = 1024 * 1024 * 100;"
-    q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' Tables_in_database, COUNT(1) \"Number of Rows\" FROM ',db,'.',tb) SEPARATOR ' UNION '),') A;') "
-    q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
-    q += "PREPARE s FROM @sql;"
-    arr_query.append(q)
+    # -- Old broken version commented out --
+    # q = "SET group_concat_max_len = 1024 * 1024 * 100;"
+    # q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' Tables_in_database, COUNT(1) \"Number of Rows\" FROM ',db,'.',tb) SEPARATOR ' UNION '),') A;') "
+    # q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
+    # q += "PREPARE s FROM @sql;"
+    # arr_query.append(q)
+    # q = "EXECUTE s; DEALLOCATE PREPARE s;"
+    # arr_query.append(q)
 
-    # Si se ejecuta todo en el mismo execute no retorna datos!
-    q = "EXECUTE s; DEALLOCATE PREPARE s;"
-    arr_query.append(q)
+    # -- Corrected version --
+    arr_query.append("SET SESSION group_concat_max_len = 1024 * 1024 * 100;")
+    arr_query.append("""
+        SELECT CONCAT(
+            'SELECT * FROM (',
+            GROUP_CONCAT(
+                CONCAT(
+                    'SELECT ', QUOTE(table_name), ' AS `Table`, COUNT(1) AS `Rows` FROM ', table_schema, '.', table_name
+                ) SEPARATOR ' UNION ALL '
+            ),
+            ') A ORDER BY `Table` ASC'
+        ) AS sql_query
+        FROM (
+            SELECT table_schema, table_name
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name NOT LIKE '%_migration_backup_%'
+        ) AS tables;
+    """)
 
     return_query = _mysql_fetchall_querys(arr_query)
+
+    if not return_query or len(return_query) < 2:
+        print("Error building dynamic SQL for migration check.")
+        return False
+
+    dynamic_sql = return_query[1][0][0]
+
+    arr_query = []
+    arr_query.append(f"PREPARE s FROM {repr(dynamic_sql)};")
+    arr_query.append("EXECUTE s;")
+    arr_query.append("DEALLOCATE PREPARE s;")
+
+    return_query = _mysql_fetchall_querys(arr_query)
+
     list_tables = return_query[1]
 
     isOkMigration = True
@@ -691,49 +723,64 @@ def _mysql_migration_check():
 
         if count != count_sqlite:
             isOkMigration = False
-            # 80 = size + text ("- Running   "), pongo algo mas
             print('{:<80}'.format("- [!!] -> {0} -> [SQLite ({1}) / MySQL ({2})] = {3}".format(table, count_sqlite, count, count_sqlite - count)))
-        else:
-            # print("- [OK] -> {0} ({1})".format(table, count))
-            pass
-
     return isOkMigration
+
 
 
 def _mysql_tables_clean():
     global check_count_data
 
-    if not _mysql_IsConnect:
+    if not _mysql_IsConnect():
         return False
 
     print("Start clean tables:")
+
     arr_query = []
 
-    # TODO: Pendiente ver por que si no se vacia __EFMigrationsHistory no se importan todos los datos correctamente!!!!!!
+    # -- Original Code, now commented out --
+    # q = "SET group_concat_max_len = 1024 * 1024 * 100;"
+    # q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' `Table`, COUNT(1) `Rows` FROM ',db,'.',tb) SEPARATOR ' UNION '),') A "
+    # q += "ORDER BY `Table` ASC "
+    # q += ";')"
+    # q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
+    # q += "PREPARE s FROM @sql;"
+    # arr_query.append(q)
+    # q = "EXECUTE s; DEALLOCATE PREPARE s;"
+    # arr_query.append(q)
 
-    # Retorna datos no fiables, en ocasiones dice que hay 0 registros y si tiene registros.
-    # q = "SELECT table_name, table_rows FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}';".format(mysql_cfg['db'])
+    # -- Corrected code --
+    arr_query.append("SET SESSION group_concat_max_len = 1024 * 1024 * 100;")
+    arr_query.append("""
+        SELECT CONCAT(
+            'SELECT * FROM (',
+            GROUP_CONCAT(
+                CONCAT(
+                    'SELECT ', QUOTE(table_name), ' AS `Table`, COUNT(1) AS `Rows` FROM ', table_schema, '.', table_name
+                ) SEPARATOR ' UNION ALL '
+            ),
+            ') A ORDER BY `Table` ASC'
+        ) AS sql_query
+        FROM (
+            SELECT table_schema, table_name
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+              AND table_name NOT LIKE '%_migration_backup_%'
+        ) AS tables;
+    """)
 
-    q = "SET group_concat_max_len = 1024 * 1024 * 100;"
-    q += "SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(CONCAT('SELECT ',QUOTE(tb),' `Table`, COUNT(1) `Rows` FROM ',db,'.',tb) SEPARATOR ' UNION '),') A "
-    q += "ORDER BY "
+    return_query = _mysql_fetchall_querys(arr_query)
 
-    # No hace falta ordenar las tablas ya que usamos DISABLE_FOREIGN_KEY_CHECKS.
-    # q += "`Table` = \"__EFMigrationsHistory\" DESC, "
-    # q += "`Table` = \"AspNetUsers\" DESC, `Table` = \"ChildRequests\" DESC, `Table` = \"MovieRequests\" DESC, "
-    # q += "`Table` = \"Issues\" DESC, `Table` = \"IssueComments\" DESC, `Table` = \"IssueCategory\" DESC, "
-    # q += "`Table` = \"EmbyContent\" DESC, `Table` =  \"EmbyEpisode\" DESC, "
-    # q += "`Table` = \"PlexServerContent\" DESC, `Table` = \"PlexSeasonsContent\" DESC, `Table` = \"PlexEpisode\" DESC, "
+    if not return_query or len(return_query) < 2:
+        print("Error building dynamic SQL to list tables.")
+        return False
 
-    q += "`Table` ASC "
-    q += ";')"
-    q += "INTO @sql FROM (SELECT table_schema db,table_name tb FROM information_schema.tables WHERE table_schema = DATABASE() and table_name not LIKE '%_migration_backup_%') A;"
-    q += "PREPARE s FROM @sql;"
-    arr_query.append(q)
+    dynamic_sql = return_query[1][0][0]
 
-    # Si se ejecuta todo en el mismo execute no retorna datos!
-    q = "EXECUTE s; DEALLOCATE PREPARE s;"
-    arr_query.append(q)
+    arr_query = []
+    arr_query.append(f"PREPARE s FROM {repr(dynamic_sql)};")
+    arr_query.append("EXECUTE s;")
+    arr_query.append("DEALLOCATE PREPARE s;")
 
     return_query = _mysql_fetchall_querys(arr_query)
 
@@ -742,13 +789,10 @@ def _mysql_tables_clean():
         tableLower = table.lower()
 
         if count == 0:
-            # print("- [EMPTY] -> {0}".format(table))
             continue
 
         if tableLower in mysql_list_tables_save_backup:
             table_temp = "{0}_migration_backup_{1}".format(_fix_name_table(table), datetime.datetime.now().strftime("%Y%m%d%H%M%S_%f"))
-
-            # print("- [BACKUP] -> {0} in {1}".format(table, table_temp))
             print("- [BACKUP] -> {0}".format(table))
 
             q = "CREATE TABLE `{0}` LIKE `{1}`;".format(table_temp, _fix_name_table(table))
@@ -759,7 +803,6 @@ def _mysql_tables_clean():
         if tableLower in mysql_list_tables_skip_clean:
             if tableLower not in check_count_data:
                 check_count_data[tableLower] = 0
-
             check_count_data[tableLower] += count
             print("- [SKIP  ] -> {0} -> rows: {1}".format(table, count))
             continue
