@@ -7,7 +7,7 @@ RUN apt-get update \
         # Dependencias base
         python3 python3-pip git libicu-dev python3-venv \
         # Dependencias para compilar mysqlclient y soporte MariaDB/MySQL
-        libmariadb-dev pkg-config gcc default-libmysqlclient-dev build-essential \
+        python3-dev libmariadb-dev pkg-config gcc default-libmysqlclient-dev build-essential \
     && apt-get clean autoclean \
     && apt-get autoremove --yes \
     && rm -rf /var/lib/{apt,dpkg,cache,log}/
