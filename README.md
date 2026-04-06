@@ -48,41 +48,6 @@ If you need help, include the full error output (including the SQL and Python tr
 
 ---
 
-## 🐳 Docker usage and automation
-
-You can use the provided Dockerfile to automate the migration process. The container supports the following environment variables for MySQL/MariaDB automation:
-
-- `MYSQL_HOST` (required): MySQL/MariaDB server host
-- `MYSQL_PORT` (default: 3306): MySQL/MariaDB server port
-- `MYSQL_DB` (default: Ombi): Database name
-- `MYSQL_USER` (default: ombi): Database user
-- `MYSQL_PASSWD` (default: empty): Database user password
-- `MYSQL_ROOT_USER` (optional): Admin user for creating the database/user (default: same as MYSQL_USER)
-- `MYSQL_ROOT_PASSWORD` (optional): Admin password for creating the database/user (default: same as MYSQL_PASSWD)
-
-The container will:
-- Create the database if it does not exist (with `utf8mb4_bin` collation)
-- Create the user and grant privileges if it does not exist
-- Run the migration script automatically
-
-Mount your SQLite databases and config as a volume in `/config`:
-
-```bash
-docker run --rm \
-  -e MYSQL_HOST=192.168.1.100 \
-  -e MYSQL_DB=Ombi \
-  -e MYSQL_USER=ombi \
-  -e MYSQL_PASSWD=ombi \
-  -e MYSQL_ROOT_USER=root \
-  -e MYSQL_ROOT_PASSWORD=your_root_password \
-  -v /path/to/your/ombi/config:/config \
-  ombi_sqlite_mysql:latest
-```
-
-If you do not set `MYSQL_ROOT_USER` and `MYSQL_ROOT_PASSWORD`, the container will try to create the database and user with the same credentials as `MYSQL_USER`/`MYSQL_PASSWD`.
-
----
-
 # Migration procedure
 
 * 1\. [Requirements](#1-requirements)
