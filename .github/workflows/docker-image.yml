@@ -21,13 +21,13 @@ jobs:
     - name: Install Docker Compose
       run: |
         sudo apt-get update
-        sudo apt-get install -y docker-compose-plugin
+        sudo apt-get install -y docker-compose
     - name: Build test image
       run: |
         docker build -t ${{ env.IMAGE_NAME }}:test .
-    - name: Run integration test with docker compose
+    - name: Run integration test with docker-compose
       run: |
-        docker compose -f docker-compose.ci.yml up --abort-on-container-exit --exit-code-from migrator
+        docker-compose -f docker-compose.ci.yml up --abort-on-container-exit --exit-code-from migrator
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
