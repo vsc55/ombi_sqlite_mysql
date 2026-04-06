@@ -1,3 +1,88 @@
+---
+
+## ⚠️ Important: Table name case-sensitivity in MySQL/MariaDB
+
+MySQL/MariaDB handles table name case-sensitivity differently depending on the operating system:
+
+- **Linux**: Table names are case-sensitive by default (`lower_case_table_names=0`).
+- **Windows**: Table names are NOT case-sensitive (`lower_case_table_names=1`).
+
+This script automatically detects the server configuration and adjusts table names to avoid migration errors. **However, if you migrate between systems with different case-sensitivity, ensure your table names are consistent and check the `lower_case_table_names` variable on your MySQL/MariaDB server.**
+
+If you encounter "table not found" errors after migration, review your server settings and consider renaming tables or adjusting the variable accordingly.
+
+---
+
+## Example: MySQL/MariaDB error 1064 and troubleshooting
+
+If you encounter an error like the following during migration:
+
+```
+* MySQL Error [1064]: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ...
+* Error Query: SET group_concat_max_len = 1024 * 1024 * 100;SELECT CONCAT('SELECT * FROM (',GROUP_CONCAT(...)
+
+* MySQL Error [1064]: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near ...
+* Error Query: EXECUTE s; DEALLOCATE PREPARE s;
+
+Traceback (most recent call last):
+  File "ombi_sqlite2mysql.py", line 1250, in <module>
+    main()
+  File "ombi_sqlite2mysql.py", line 1221, in main
+    if _mysql_tables_clean():
+  File "ombi_sqlite2mysql.py", line 741, in _mysql_tables_clean
+    for table, count in return_query[1]:
+TypeError: 'NoneType' object is not iterable
+```
+
+### What does this mean?
+- The script attempted to run a dynamic SQL query that failed due to a syntax error (error 1064).
+- After the SQL error, the script tried to process the result, but since the query failed, the result was `None`, causing a Python `TypeError`.
+
+### How to troubleshoot
+- Carefully check the SQL error message and the problematic query shown after `* Error Query:`.
+- Review your MySQL/MariaDB version and compatibility with the generated SQL.
+- Check the value of `lower_case_table_names` and your table names for case-sensitivity issues (see section above).
+- If you see a Python traceback after a MySQL error, it means the script did not handle the failed query gracefully. This does not affect your data, but you should fix the SQL error and re-run the migration.
+
+If you need help, include the full error output (including the SQL and Python traceback) when opening an issue.
+
+---
+
+## 🐳 Docker usage and automation
+
+You can use the provided Dockerfile to automate the migration process. The container supports the following environment variables for MySQL/MariaDB automation:
+
+- `MYSQL_HOST` (required): MySQL/MariaDB server host
+- `MYSQL_PORT` (default: 3306): MySQL/MariaDB server port
+- `MYSQL_DB` (default: Ombi): Database name
+- `MYSQL_USER` (default: ombi): Database user
+- `MYSQL_PASSWD` (default: empty): Database user password
+- `MYSQL_ROOT_USER` (optional): Admin user for creating the database/user (default: same as MYSQL_USER)
+- `MYSQL_ROOT_PASSWORD` (optional): Admin password for creating the database/user (default: same as MYSQL_PASSWD)
+
+The container will:
+- Create the database if it does not exist (with `utf8mb4_bin` collation)
+- Create the user and grant privileges if it does not exist
+- Run the migration script automatically
+
+Mount your SQLite databases and config as a volume in `/config`:
+
+```bash
+docker run --rm \
+  -e MYSQL_HOST=192.168.1.100 \
+  -e MYSQL_DB=Ombi \
+  -e MYSQL_USER=ombi \
+  -e MYSQL_PASSWD=ombi \
+  -e MYSQL_ROOT_USER=root \
+  -e MYSQL_ROOT_PASSWORD=your_root_password \
+  -v /path/to/your/ombi/config:/config \
+  ombi_sqlite_mysql:latest
+```
+
+If you do not set `MYSQL_ROOT_USER` and `MYSQL_ROOT_PASSWORD`, the container will try to create the database and user with the same credentials as `MYSQL_USER`/`MYSQL_PASSWD`.
+
+---
+
 # Migration procedure
 
 * 1\. [Requirements](#1-requirements)

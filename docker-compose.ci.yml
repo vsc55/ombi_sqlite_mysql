@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  mariadb:
+    image: mariadb:11
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: Ombi
+      MYSQL_USER: ombi
+      MYSQL_PASSWORD: ombi
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrator:
+    image: ombi_sqlite_mysql:test
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_PORT: 3306
+      MYSQL_DB: Ombi
+      MYSQL_USER: ombi
+      MYSQL_PASSWD: ombi
+      MYSQL_ROOT_USER: root
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes:
+      - ./testdata/config:/config
+    entrypoint: ["/entrypoint.sh"]

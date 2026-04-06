@@ -423,7 +423,7 @@ def _mysql_connect(show_msg=True):
             print("MySQL > No Config!")
         return False
 
-    if _mysql_IsConnect:
+    if _mysql_IsConnect():
         _mysql_disconnect()
 
     if show_msg:
@@ -482,7 +482,7 @@ def _mysql_execute_querys(list_insert, progressbar_text, progressbar_size, run_c
     global mysql_conn
     global mysql_list_error
 
-    if not _mysql_IsConnect:
+    if not _mysql_IsConnect():
         # controlar si no hay conexion con mysql return false o sys.exit()
         return False
 
@@ -560,7 +560,7 @@ def _mysql_fetchall_querys(query, ignorer_error=[]):
     if not query or len(query) == 0:
         return None
 
-    if not _mysql_IsConnect:
+    if not _mysql_IsConnect():
         return None
 
     data_return = []
@@ -616,17 +616,18 @@ def _mysql_get_lower_case_table_name():
     # https://support.cpanel.net/hc/en-us/articles/360052452713-Mysql-MariaDB-setting-for-case-sensitivity-uppercase-lowercase-
 
     return_query = _mysql_fetchall_querys(["show variables where variable_name = 'lower_case_table_names'"])
-
-    if (return_query[0][0][1] == "0"):
+    try:
+        if (return_query[0][0][1] == "0"):
+            mysql_lower_case_table_names = False
+        else:
+            mysql_lower_case_table_names = True
+    except Exception:
         mysql_lower_case_table_names = False
-    else:
-        mysql_lower_case_table_names = True
-
     return mysql_lower_case_table_names
 
 
 def _mysql_migration(data_dump):
-    if not _mysql_IsConnect:
+    if not _mysql_IsConnect():
         return False
 
     print("Start Migration:")
